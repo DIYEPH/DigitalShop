@@ -1,0 +1,48 @@
+{
+  "name": "backend-nestjs",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DigitalShop backend-nestjs clean architecture scaffold",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "nest build",
+    "start": "node dist/main.js",
+    "start:dev": "nest start --watch",
+    "start:prod": "node dist/main.js",
+    "typecheck": "tsc --noEmit",
+    "check:consistency": "node scripts/check-code-consistency.js",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "node --require ./test/register-ts.js --require ts-node/register --test test/unit/order-pricing.test.ts test/unit/pg-enum-array.test.ts test/unit/binance-pay.gateway.test.ts test/unit/sepay.gateway.test.ts test/unit/sepay-tx-id.test.ts test/unit/bank-checkout.test.ts test/unit/order-payment-fields.test.ts test/unit/order-list-status-group.test.ts test/unit/claim-date.test.ts test/unit/daily-login-config.test.ts test/unit/referral-config.test.ts",
+    "test:e2e": "node --require ./test/register-ts.js --require ts-node/register --test test/e2e/telegram-api.test.ts",
+    "db:init": "node scripts/db-init.js",
+    "db:reset": "node scripts/db-init.js --reset",
+    "db:seed": "node scripts/db-seed.js",
+    "db:fresh": "npm run db:reset && npm run db:seed"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@nestjs/common": "^11.1.19",
+    "@nestjs/config": "^4.0.4",
+    "@nestjs/core": "^11.1.19",
+    "@nestjs/platform-express": "^11.1.19",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "dotenv": "^17.4.2",
+    "pg": "^8.20.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.21",
+    "@nestjs/schematics": "^11.1.0",
+    "@nestjs/testing": "^11.1.19",
+    "@types/node": "^25.6.0",
+    "@types/supertest": "^6.0.3",
+    "supertest": "^7.1.0",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^6.0.3"
+  }
+}
