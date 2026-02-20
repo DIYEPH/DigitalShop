@@ -1,0 +1,1 @@
+export const POINT_REPOSITORY = Symbol('POINT_REPOSITORY');
