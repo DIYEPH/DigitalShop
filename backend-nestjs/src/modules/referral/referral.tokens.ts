@@ -1,0 +1,1 @@
+export const REFERRAL_REPOSITORY = Symbol('REFERRAL_REPOSITORY');
