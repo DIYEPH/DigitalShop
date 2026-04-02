@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+.history/
+# Environment
+.env
+
+# Database
+data/*
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.cursor/
+.docs/
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Misc
+*.tmp
+*.temp
