@@ -1,0 +1,25 @@
+{
+  "name": "bot_binance_pay",
+  "version": "1.0.0",
+  "description": "Telegram Shop Bot for Selling Accounts via Binance Pay",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node src/bot.js",
+    "dev": "nodemon src/bot.js",
+    "bot": "node src/bot.js",
+    "lint": "eslint \"src/**/*.js\"",
+    "check:consistency": "node scripts/check-code-consistency.js"
+  },
+  "author": "DIYEPH",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.13.4",
+    "dotenv": "^17.2.3",
+    "telegraf": "^4.16.3"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.1",
+    "nodemon": "^3.1.11"
+  }
+}
