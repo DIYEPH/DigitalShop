@@ -1,0 +1,18 @@
+import React from 'react';
+import clsx from 'clsx';
+import { type I{{ pascalCase name }}Props } from './{{ kebabCase name }}.types';
+import styles from './{{ kebabCase name }}.module.scss';
+import use{{pascalCase name}}Hooks from './{{ kebabCase name }}.hooks';
+
+const {{ pascalCase name }} = (props: I{{ pascalCase name }}Props) => {
+  const { children, className, style } = props;
+  const hooks = use{{pascalCase name}}Hooks(props);
+
+  return (
+    <div className={clsx('{{ kebabCase name }}', styles.{{ camelCase name }}, className)} style={style}>
+      {children}
+    </div>
+  );
+}
+
+export default React.memo({{ pascalCase name }});
