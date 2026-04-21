@@ -1,0 +1,18 @@
+import React from 'react';
+
+import {{ pascalCase name }}ContextProvider from './{{ kebabCase name }}.context';
+import { type I{{ pascalCase name }}Props } from './{{ kebabCase name }}.types';
+import use{{ pascalCase name }}Model from './{{ kebabCase name }}.model';
+
+const {{ pascalCase name }} = (props: I{{ pascalCase name }}Props) => {
+  const { children } = props;
+  const { value, decrement, increment } = use{{ pascalCase name }}Model(props);
+
+  return (
+    <{{ pascalCase name }}ContextProvider value={ { value, decrement, increment } }>
+      {children}
+    </{{ pascalCase name }}ContextProvider>
+  );
+}
+
+export default React.memo({{ pascalCase name }});
