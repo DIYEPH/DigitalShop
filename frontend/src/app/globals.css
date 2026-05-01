@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+/* Map our SCSS-emitted CSS variables (--c-*) to Tailwind v4 color utilities.
+   Tokens live in src/styles/_tokens.scss; the same class names automatically
+   adapt to data-scheme=dark and data-theme=<season>. */
+@theme inline {
+  --color-fg: var(--c-fg);
+  --color-fg-soft: var(--c-fg-soft);
+  --color-muted: var(--c-muted);
+
+  --color-bg: var(--c-bg-page);
+  --color-surface: var(--c-surface);
+  --color-surface-soft: var(--c-surface-soft);
+  --color-card: var(--c-card);
+  --color-frame: var(--c-frame);
+
+  --color-border: var(--c-border);
+  --color-border-soft: var(--c-border-soft);
+
+  --color-primary: var(--c-primary);
+  --color-primary-strong: var(--c-primary-strong);
+  --color-primary-soft: var(--c-primary-soft);
+  --color-accent: var(--c-accent);
+  --color-warning: var(--c-warning);
+  --color-danger: var(--c-invalid);
+  --color-success: var(--c-success);
+
+  --color-title: var(--c-title);
+  --color-tab-fg: var(--c-tab-fg);
+  --color-tab-active: var(--c-tab-active);
+
+  --color-glass: var(--c-glass-bg);
+  --color-glass-strong: var(--c-glass-bg-strong);
+  --color-glass-soft: var(--c-glass-bg-soft);
+  --color-glass-border: var(--c-glass-border);
+}
+
+:root {
+  --color-background: var(--c-surface);
+  --color-foreground: var(--c-fg);
+  --font-sans: var(--font-app-sans);
+  --font-mono: var(--font-app-mono);
+
+  --spacing-stack-xs: 0.25rem;
+  --spacing-stack-tight: 0.5rem;
+  --spacing-stack-comfortable: 0.75rem;
+  --spacing-stack-relaxed: 1rem;
+  --spacing-stack-loose: 1.5rem;
+  --spacing-stack-spacious: 2rem;
+
+  --spacing-inset-xs: 0.25rem;
+  --spacing-inset-tight: 0.5rem;
+  --spacing-inset-comfortable: 0.75rem;
+  --spacing-inset-relaxed: 1rem;
+  --spacing-inset-medium: 1.25rem;
+  --spacing-inset-loose: 1.5rem;
+  --spacing-inset-spacious: 2rem;
+
+  --spacing-page-x: 1rem;
+  --spacing-header-x: 2rem;
+  --spacing-sidebar: 14.0625rem;
+}
+body {
+  background: var(--c-surface);
+  color: var(--c-fg);
+  font-family: var(--font-app-sans), "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  font-feature-settings: "ss01", "cv11";
+  letter-spacing: -0.005em;
+  line-height: 1.5;
+}
+
+*{
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
