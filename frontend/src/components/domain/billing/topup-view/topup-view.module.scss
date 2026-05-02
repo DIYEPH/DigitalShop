@@ -1,0 +1,82 @@
+.shell {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 52rem;
+  padding: var(--spacing-inset-relaxed) var(--spacing-inset-relaxed) var(--spacing-inset-loose);
+}
+
+.card {
+  border-color: var(--c-primary-soft-strong);
+  padding: var(--spacing-inset-relaxed);
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--c-warning) 22%, transparent), transparent 36%),
+    radial-gradient(circle at bottom left, color-mix(in srgb, var(--c-primary) 22%, transparent), transparent 40%),
+    var(--c-card);
+}
+
+@media (width >= 40rem) {
+  .card {
+    padding: var(--spacing-inset-loose);
+  }
+}
+
+.kicker {
+  font-size: 0.75rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c-primary-strong);
+}
+
+.title {
+  margin-top: var(--spacing-stack-tight);
+  font-size: clamp(1.65rem, 4vw, 2.4rem);
+  font-weight: 950;
+  line-height: 1.05;
+  color: var(--c-title);
+}
+
+.intro {
+  margin-top: var(--spacing-stack-tight);
+  max-width: 36rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--c-fg-soft);
+}
+
+.balanceRow {
+  margin-top: var(--spacing-stack-loose);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 1rem;
+  border: 0.0625rem solid var(--c-border);
+  padding: var(--spacing-inset-comfortable);
+  background: var(--c-glass-bg-strong);
+  font-size: 0.875rem;
+}
+
+.labelMuted {
+  font-weight: 900;
+  color: var(--c-fg-soft);
+}
+
+.amount {
+  font-size: 1.35rem;
+  font-weight: 950;
+  color: var(--c-title);
+}
+
+.hint {
+  margin-top: var(--spacing-stack-comfortable);
+  font-size: 0.875rem;
+  max-width: 40rem;
+  font-weight: 700;
+  color: var(--c-fg-soft);
+}
+
+.actions {
+  margin-top: var(--spacing-stack-relaxed);
+  display: flex;
+  justify-content: flex-end;
+}
