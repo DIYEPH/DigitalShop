@@ -1,0 +1,27 @@
+.form {
+  margin-inline: auto;
+  display: grid;
+  width: 100%;
+  max-width: 36rem;
+  gap: var(--spacing-stack-relaxed);
+  padding: var(--spacing-inset-relaxed);
+}
+
+@media (width >= 40rem) {
+  .form {
+    padding: var(--spacing-inset-loose);
+  }
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--c-fg);
+}
+
+.description {
+  margin-top: var(--spacing-stack-xs);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--c-muted);
+}
