@@ -1,0 +1,105 @@
+.pageShell {
+  margin-inline: auto;
+  display: grid;
+  width: 100%;
+  max-width: 64rem;
+  gap: var(--spacing-stack-loose);
+}
+
+@media (width >= 56rem) {
+  .pageShell {
+    grid-template-columns: minmax(0, 0.9fr) minmax(24rem, 1fr);
+    align-items: stretch;
+  }
+}
+
+.copyPanel {
+  min-height: 18rem;
+  border: 0.0625rem solid var(--c-primary-soft-strong);
+  border-radius: 1rem;
+  padding: var(--spacing-inset-relaxed);
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--c-primary) 28%, transparent), transparent 44%),
+    radial-gradient(circle at bottom right, color-mix(in srgb, var(--c-warning) 18%, transparent), transparent 36%),
+    var(--c-card);
+}
+
+.kicker {
+  font-size: 0.75rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c-primary-strong);
+}
+
+.heroTitle {
+  margin-top: var(--spacing-stack-tight);
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  font-weight: 950;
+  line-height: 1;
+  color: var(--c-title);
+}
+
+.heroText {
+  margin-top: var(--spacing-stack-comfortable);
+  max-width: 26rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--c-fg-soft);
+}
+
+.form {
+  display: grid;
+  gap: var(--spacing-stack-comfortable);
+  width: 100%;
+  border-color: var(--c-border);
+  padding: var(--spacing-inset-relaxed);
+}
+
+.title {
+  font-size: 1.7rem;
+  font-weight: 950;
+  line-height: 1.05;
+  color: var(--c-title);
+}
+
+.errorBanner {
+  border: 0.0625rem solid color-mix(in srgb, var(--c-invalid) 32%, var(--c-border));
+  border-radius: 1rem;
+  padding: var(--spacing-inset-tight);
+  font-size: 0.875rem;
+  font-weight: 800;
+  color: var(--c-invalid);
+  background: color-mix(in srgb, var(--c-invalid) 10%, transparent);
+}
+
+.footer {
+  margin-top: var(--spacing-stack-xs);
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--c-fg-soft);
+}
+
+.inlineLink {
+  font-weight: 900;
+  color: var(--c-primary-strong);
+}
+
+.inlineLink:hover {
+  text-decoration: underline;
+}
+
+.submit {
+  margin-top: var(--spacing-stack-tight);
+  width: 100%;
+  justify-content: center;
+}
+
+.turnstileWrap {
+  min-height: 4.25rem;
+  overflow: hidden;
+  border: 0.0625rem solid var(--c-border);
+  border-radius: 1rem;
+  padding: var(--spacing-inset-tight);
+  background: color-mix(in srgb, var(--c-surface-soft) 78%, transparent);
+}
