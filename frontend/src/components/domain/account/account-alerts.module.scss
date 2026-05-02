@@ -1,0 +1,18 @@
+@mixin banner-base {
+  border-radius: 0.75rem;
+  padding: var(--spacing-inset-comfortable);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.success {
+  @include banner-base;
+  color: var(--c-success);
+  background: color-mix(in srgb, var(--c-success) 10%, transparent);
+}
+
+.danger {
+  @include banner-base;
+  color: var(--c-invalid);
+  background: color-mix(in srgb, var(--c-invalid) 10%, transparent);
+}
