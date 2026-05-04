@@ -1,0 +1,24 @@
+@mixin error-banner {
+  border-radius: 1rem;
+  padding: var(--spacing-inset-relaxed);
+  text-align: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--c-invalid);
+  background: color-mix(in srgb, var(--c-invalid) 10%, transparent);
+}
+
+@mixin error-banner-comfortable {
+  border-radius: 0.75rem;
+  padding: var(--spacing-inset-comfortable);
+  text-align: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--c-invalid);
+  background: color-mix(in srgb, var(--c-invalid) 10%, transparent);
+}
+
+@mixin text-muted-center {
+  text-align: center;
+  color: var(--c-muted);
+}
