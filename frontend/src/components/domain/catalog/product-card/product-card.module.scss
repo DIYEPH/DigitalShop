@@ -1,0 +1,168 @@
+@mixin badge-base {
+  border-radius: 999rem;
+  padding-inline: var(--spacing-inset-tight);
+  padding-block: var(--spacing-inset-xs);
+  font-size: 0.6875rem;
+  font-weight: 900;
+  box-shadow: 0 1px 2px var(--c-card-shadow);
+}
+
+.card {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.card:hover {
+  border-color: var(--c-primary-soft-strong);
+  box-shadow:
+    0 1.5rem 3.5rem var(--c-card-shadow),
+    0 0 0 0.0625rem color-mix(in srgb, var(--c-primary) 22%, transparent);
+  transform: translateY(-0.125rem);
+}
+
+.link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.cardInner {
+  display: grid;
+  gap: var(--spacing-stack-comfortable);
+  padding: var(--spacing-inset-comfortable);
+}
+
+.thumb {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  flex-shrink: 0;
+  border-radius: 0.9rem;
+  object-fit: cover;
+  background: var(--c-surface-soft);
+}
+
+.thumbPlaceholder {
+  position: relative;
+  flex-shrink: 0;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: 0.9rem;
+  background:
+    radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--c-primary) 34%, transparent), transparent 32%),
+    radial-gradient(circle at 80% 10%, color-mix(in srgb, var(--c-warning) 28%, transparent), transparent 28%),
+    linear-gradient(135deg, var(--c-surface-soft), var(--c-card));
+}
+
+.thumbPlaceholder::after {
+  position: absolute;
+  inset: auto 1rem 1rem auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999rem;
+  background: color-mix(in srgb, var(--c-primary) 18%, transparent);
+  content: "";
+}
+
+.body {
+  min-width: 0;
+  flex: 1;
+}
+
+.badgeRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-stack-xs);
+}
+
+.badgeSoldOut {
+  @include badge-base;
+  background: var(--c-surface-soft);
+  color: var(--c-muted);
+}
+
+.badgeHot {
+  @include badge-base;
+  background: var(--c-invalid);
+  color: var(--c-btn-fg);
+}
+
+.badgeNew {
+  @include badge-base;
+  background: var(--c-primary);
+  color: var(--c-btn-fg);
+}
+
+.badgePopular {
+  @include badge-base;
+  border: 0.0625rem solid var(--c-border);
+  background: color-mix(in srgb, var(--c-surface) 76%, transparent);
+  color: var(--c-primary-strong);
+}
+
+.title {
+  margin-top: var(--spacing-stack-tight);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: 1rem;
+  font-weight: 950;
+  line-height: 1.18;
+  color: var(--c-fg);
+}
+
+.desc {
+  margin-top: var(--spacing-stack-xs);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--c-fg-soft);
+}
+
+.priceBlock {
+  margin-top: auto;
+  min-width: 0;
+  padding: 0 var(--spacing-inset-comfortable);
+}
+
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-stack-tight);
+}
+
+.price {
+  font-size: 1.35rem;
+  font-weight: 950;
+  letter-spacing: -0.03em;
+  color: var(--c-title);
+}
+
+.altPrice {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--c-muted);
+}
+
+.soldCount {
+  margin-top: var(--spacing-stack-xs);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--c-muted);
+}
+
+.actions {
+  margin-top: var(--spacing-stack-comfortable);
+  padding: 0 var(--spacing-inset-comfortable) var(--spacing-inset-comfortable);
+}
