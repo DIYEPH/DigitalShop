@@ -1,0 +1,31 @@
+.root {
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
+  font-size: 0.75rem;
+  font-weight: 900;
+  color: var(--c-fg-soft);
+}
+
+.grid {
+  margin-top: var(--spacing-stack-tight);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-stack-tight);
+}
+
+.option {
+  width: 100%;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--c-fg);
+}
+
+.optionActive {
+  border-color: var(--c-primary-strong);
+  background-color: var(--c-primary-soft);
+}
+
