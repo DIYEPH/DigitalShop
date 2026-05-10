@@ -1,0 +1,17 @@
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.label {
+  font-size: 0.75rem;
+  font-weight: 900;
+  color: var(--c-invalid);
+}
+
+.timer {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--c-muted);
+}
