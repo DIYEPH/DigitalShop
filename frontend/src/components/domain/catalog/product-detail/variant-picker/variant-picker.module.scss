@@ -1,0 +1,72 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.label {
+  font-size: 0.75rem;
+  font-weight: 900;
+  color: var(--c-fg-soft);
+}
+
+.optionsRow {
+  margin-top: var(--spacing-stack-tight);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-stack-tight);
+}
+
+.option {
+  flex: 0 0 auto;
+  width: fit-content;
+  min-width: 140px;
+  max-width: 100%;
+  text-align: left;
+}
+
+.optionActive {
+  border-color: var(--c-primary-strong);
+  background-color: var(--c-primary-soft);
+}
+
+.optionDisabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.name {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--c-fg);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge {
+  flex: 0 0 auto;
+  border-radius: 999rem;
+  background: var(--c-primary-soft);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.625rem;
+  font-weight: 800;
+  color: var(--c-primary-strong);
+}
+
+.price {
+  margin-top: 0.25rem;
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--c-muted);
+}
