@@ -1,0 +1,82 @@
+.box {
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--c-primary) 30%, var(--c-border));
+  background: color-mix(in srgb, var(--c-primary) 5%, transparent);
+  padding: var(--spacing-inset-comfortable);
+}
+
+.title {
+  font-size: 0.875rem;
+  font-weight: 900;
+  color: var(--c-primary);
+}
+
+.list {
+  margin-top: var(--spacing-stack-tight);
+  display: grid;
+  gap: var(--spacing-stack-xs);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-stack-tight);
+  border-radius: 0.75rem;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  padding: var(--spacing-inset-xs) var(--spacing-inset-comfortable);
+  font-size: 0.75rem;
+  color: var(--c-fg-soft);
+}
+
+.rowActive {
+  border-color: var(--c-primary);
+  background: color-mix(in srgb, var(--c-primary) 15%, transparent);
+  font-weight: 900;
+  color: var(--c-fg);
+}
+
+.rowLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-stack-tight);
+}
+
+.qtyLabel {
+  font-weight: 900;
+}
+
+.pctBadge {
+  border-radius: 0.375rem;
+  background: color-mix(in srgb, var(--c-primary) 10%, transparent);
+  padding: var(--spacing-inset-xs) var(--spacing-inset-tight);
+  font-size: 0.625rem;
+  font-weight: 900;
+  color: var(--c-primary);
+}
+
+.priceBlock {
+  font-weight: 900;
+}
+
+.perHint {
+  margin-left: var(--spacing-stack-xs);
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--c-muted);
+}
+
+.footerOk {
+  margin-top: var(--spacing-stack-tight);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--c-success);
+}
+
+.footerMuted {
+  margin-top: var(--spacing-stack-tight);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--c-muted);
+}
