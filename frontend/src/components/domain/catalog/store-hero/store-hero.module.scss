@@ -1,0 +1,124 @@
+.section {
+  position: relative;
+  display: flex;
+  height: 20rem;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 1rem;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+}
+
+@media (width >= 64rem) {
+  .section {
+    height: 24rem;
+  }
+}
+
+.banner {
+  object-fit: cover;
+}
+
+.overlay {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  max-width: 42rem;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--spacing-inset-loose);
+}
+
+@media (width >= 40rem) {
+  .overlay {
+    padding: var(--spacing-inset-spacious);
+  }
+}
+
+@media (width >= 64rem) {
+  .overlay {
+    padding-inline: var(--spacing-page-x);
+    padding-block: var(--spacing-inset-spacious);
+  }
+}
+
+.badge {
+  margin-bottom: var(--spacing-stack-comfortable);
+  display: inline-block;
+  border-radius: 999rem;
+  background: color-mix(in srgb, #fff 20%, transparent);
+  padding: var(--spacing-inset-tight) var(--spacing-inset-relaxed);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--c-btn-fg);
+  backdrop-filter: blur(8px);
+}
+
+.headline {
+  margin-bottom: var(--spacing-stack-comfortable);
+  font-size: 2.25rem;
+  font-weight: 900;
+  line-height: 1.25;
+  color: var(--c-btn-fg);
+  text-shadow: 0 2px 12px rgb(0 0 0 / 0.35);
+}
+
+@media (width >= 64rem) {
+  .headline {
+    font-size: 3.75rem;
+  }
+}
+
+.subHeadline {
+  margin-bottom: var(--spacing-stack-relaxed);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--c-btn-fg) 92%, var(--c-accent));
+  text-shadow: 0 2px 12px rgb(0 0 0 / 0.35);
+}
+
+@media (width >= 64rem) {
+  .subHeadline {
+    font-size: 2.25rem;
+  }
+}
+
+.tagline {
+  margin-bottom: var(--spacing-stack-loose);
+  font-size: 1.125rem;
+  color: color-mix(in srgb, var(--c-btn-fg) 90%, transparent);
+}
+
+@media (width >= 64rem) {
+  .tagline {
+    font-size: 1.25rem;
+  }
+}
+
+.cta {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  border-radius: 999rem;
+  background: var(--c-surface);
+  padding: var(--spacing-inset-comfortable) var(--spacing-inset-spacious);
+  font-weight: 600;
+  color: var(--c-fg);
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.15);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.cta:hover {
+  transform: scale(1.05);
+  box-shadow: 0 12px 24px -4px rgb(0 0 0 / 0.2);
+}
+
+.cta:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--c-btn-fg) 50%, transparent),
+    0 10px 15px -3px rgb(0 0 0 / 0.15);
+}
