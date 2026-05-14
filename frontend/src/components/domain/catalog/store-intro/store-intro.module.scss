@@ -1,0 +1,70 @@
+.section {
+  margin-inline: auto;
+  max-width: 56rem;
+  border-radius: 0.75rem;
+  background: var(--c-surface);
+  padding: var(--spacing-inset-loose);
+  text-align: center;
+  box-shadow: 0 1px 2px var(--c-card-shadow);
+}
+
+@media (width >= 64rem) {
+  .section {
+    padding: var(--spacing-inset-spacious);
+  }
+}
+
+.title {
+  margin-bottom: var(--spacing-stack-relaxed);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--c-title);
+}
+
+@media (width >= 64rem) {
+  .title {
+    font-size: 1.875rem;
+  }
+}
+
+.grid {
+  display: grid;
+  gap: var(--spacing-stack-loose);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+@media (width >= 48rem) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.card {
+  border-radius: 0.5rem;
+  background: var(--c-card);
+  padding: var(--spacing-inset-relaxed);
+}
+
+.emoji {
+  margin-bottom: var(--spacing-stack-comfortable);
+  font-size: 1.875rem;
+  line-height: 1;
+}
+
+.cardTitle {
+  margin-bottom: var(--spacing-stack-tight);
+  font-weight: 600;
+  color: var(--c-title);
+}
+
+.cardDesc {
+  font-size: 0.875rem;
+  color: var(--c-muted);
+}
+
+.tagline {
+  margin-top: var(--spacing-stack-spacious);
+  color: var(--c-muted);
+}
