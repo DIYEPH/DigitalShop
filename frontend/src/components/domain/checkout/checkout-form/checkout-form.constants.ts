@@ -1,0 +1,1 @@
+export const PROMO_BPS_DENOMINATOR = 10_000;

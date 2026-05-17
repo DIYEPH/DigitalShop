@@ -1,0 +1,59 @@
+.loading {
+  text-align: center;
+  color: var(--c-muted);
+}
+
+.emptyCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-inline: auto;
+  width: 100%;
+  max-width: 36rem;
+  border-color: var(--c-primary-soft-strong);
+  padding: var(--spacing-inset-relaxed);
+  background:
+    radial-gradient(circle at top, color-mix(in srgb, var(--c-primary) 20%, transparent), transparent 42%),
+    var(--c-card);
+}
+
+@media (width >= 40rem) {
+  .emptyCard {
+    padding: var(--spacing-inset-spacious);
+  }
+}
+
+.emptyKicker {
+  font-size: 0.75rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c-primary-strong);
+}
+
+.emptyTitle {
+  margin-top: var(--spacing-stack-tight);
+  font-size: 1.6rem;
+  font-weight: 950;
+  line-height: 1.05;
+  color: var(--c-title);
+}
+
+.emptyText {
+  margin-top: var(--spacing-stack-tight);
+  max-width: 28rem;
+  font-weight: 700;
+  color: var(--c-fg-soft);
+}
+
+.formGrid {
+  display: grid;
+  gap: var(--spacing-stack-loose);
+}
+
+@media (width >= 64rem) {
+  .formGrid {
+    grid-template-columns: 1.1fr 1fr;
+  }
+}
