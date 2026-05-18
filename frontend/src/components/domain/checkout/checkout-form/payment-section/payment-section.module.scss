@@ -1,0 +1,166 @@
+.section {
+  border-color: var(--c-border);
+  padding: var(--spacing-inset-relaxed);
+}
+
+@media (width >= 40rem) {
+  .section {
+    padding: var(--spacing-inset-loose);
+  }
+}
+
+.title {
+  font-size: 1.125rem;
+  font-weight: 950;
+  color: var(--c-title);
+}
+
+.alertDanger {
+  margin-top: var(--spacing-stack-comfortable);
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--c-invalid) 30%, var(--c-border));
+  background: color-mix(in srgb, var(--c-invalid) 10%, transparent);
+  padding: var(--spacing-inset-comfortable);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--c-invalid);
+}
+
+.methods {
+  margin-top: var(--spacing-stack-relaxed);
+  display: grid;
+  gap: var(--spacing-stack-comfortable);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-stack-comfortable);
+}
+
+.iconWrap {
+  display: inline-flex;
+  height: 2.5rem;
+  width: 2.5rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 999rem;
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.iconSelected {
+  background:
+    radial-gradient(circle at 30% 20%, color-mix(in srgb, #fff 34%, transparent), transparent 32%),
+    var(--c-primary);
+  color: var(--c-btn-fg);
+  box-shadow: 0 0.5rem 1.25rem color-mix(in srgb, var(--c-primary) 36%, transparent);
+}
+
+.iconIdle {
+  background: color-mix(in srgb, var(--c-muted) 18%, var(--c-surface-soft));
+  color: var(--c-fg-soft);
+}
+
+.iconImg {
+  height: 1.25rem;
+  width: 1.25rem;
+  object-fit: contain;
+}
+
+.labels {
+  min-width: 0;
+  flex: 1;
+}
+
+.payTitle {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--c-fg);
+}
+
+.payDesc {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--c-muted);
+}
+
+.recommendedBadge {
+  border-radius: 999rem;
+  border: 1px solid color-mix(in srgb, var(--c-primary) 30%, var(--c-border));
+  background: color-mix(in srgb, var(--c-primary) 10%, transparent);
+  padding: var(--spacing-inset-xs) var(--spacing-inset-tight);
+  font-size: 0.625rem;
+  font-weight: 950;
+  text-transform: uppercase;
+  color: var(--c-primary-strong);
+}
+
+.voucherBlock {
+  margin-top: var(--spacing-stack-loose);
+}
+
+.voucherRow {
+  display: flex;
+  align-items: stretch;
+  gap: var(--spacing-stack-tight);
+}
+
+@mixin voucher-hint-base {
+  margin-top: var(--spacing-stack-xs);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.voucherHintError {
+  @include voucher-hint-base;
+  color: var(--c-invalid);
+}
+
+.voucherHintMuted {
+  @include voucher-hint-base;
+  color: var(--c-muted);
+}
+
+.pendingBanner {
+  margin-top: var(--spacing-stack-comfortable);
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--c-warning) 40%, var(--c-border));
+  background: color-mix(in srgb, var(--c-warning) 10%, transparent);
+  padding: var(--spacing-inset-comfortable);
+  font-size: 0.875rem;
+}
+
+.pendingText {
+  font-weight: 600;
+  color: var(--c-fg);
+}
+
+.pendingActions {
+  margin-top: var(--spacing-stack-tight);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-stack-tight);
+}
+
+.formError {
+  margin-top: var(--spacing-stack-comfortable);
+  border-radius: 1rem;
+  border: 0.0625rem solid color-mix(in srgb, var(--c-invalid) 32%, var(--c-border));
+  padding: var(--spacing-inset-comfortable);
+  font-size: 0.875rem;
+  font-weight: 800;
+  color: var(--c-invalid);
+  background: color-mix(in srgb, var(--c-invalid) 10%, transparent);
+}
+
+.submitBtn {
+  margin-top: var(--spacing-stack-relaxed);
+  width: 100%;
+}
