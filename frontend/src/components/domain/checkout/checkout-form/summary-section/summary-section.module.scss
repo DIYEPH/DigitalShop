@@ -1,0 +1,112 @@
+.section {
+  border-color: var(--c-primary-soft-strong);
+  padding: var(--spacing-inset-relaxed);
+}
+
+@media (width >= 40rem) {
+  .section {
+    padding: var(--spacing-inset-loose);
+  }
+}
+
+.title {
+  font-size: 1.125rem;
+  font-weight: 950;
+  color: var(--c-title);
+}
+
+.list {
+  margin-top: var(--spacing-stack-relaxed);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-stack-tight);
+}
+
+.line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-stack-tight);
+  border-radius: 0.8rem;
+  padding: var(--spacing-inset-tight);
+  background: color-mix(in srgb, var(--c-surface-soft) 72%, transparent);
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--c-fg-soft);
+}
+
+.lineMain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-stack-tight);
+  min-width: 0;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tierBadge {
+  display: inline-flex;
+  flex-shrink: 0;
+  border-radius: 999rem;
+  border: 0.0625rem solid var(--c-primary-soft-strong);
+  padding-inline: var(--spacing-inset-tight);
+  padding-block: var(--spacing-inset-xs);
+  font-size: 0.625rem;
+  font-weight: 900;
+  background: color-mix(in srgb, var(--c-primary) 10%, transparent);
+  color: var(--c-primary-strong);
+}
+
+.lineAmount {
+  font-weight: 950;
+  white-space: nowrap;
+  color: var(--c-fg);
+}
+
+.divider {
+  margin-block: var(--spacing-stack-comfortable);
+  border: none;
+  border-top: 1px solid var(--c-border);
+}
+
+.discountRow {
+  margin-bottom: var(--spacing-stack-tight);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  color: var(--c-fg-soft);
+}
+
+.discountAmt {
+  font-weight: 950;
+  color: var(--c-success);
+}
+
+.totalRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--c-primary) 20%, transparent), transparent 36%),
+    var(--c-primary-soft);
+  padding: var(--spacing-inset-relaxed);
+}
+
+.totalLabel {
+  font-weight: 950;
+  color: var(--c-title);
+}
+
+.totalAmt {
+  font-size: 1.65rem;
+  font-weight: 950;
+  letter-spacing: -0.03em;
+  color: var(--c-primary-strong);
+}

@@ -1,0 +1,216 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, #000 60%, transparent);
+  padding: var(--spacing-inset-relaxed);
+}
+
+.panel {
+  height: 70vh;
+  width: 80vw;
+  border-radius: 1rem;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  padding: var(--spacing-inset-medium);
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+}
+
+.headerRow {
+  margin-bottom: var(--spacing-stack-comfortable);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modalTitle {
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: var(--c-fg);
+}
+
+.loadingText {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--c-muted);
+}
+
+.errorBanner {
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--c-invalid) 10%, transparent);
+  padding: var(--spacing-inset-comfortable);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--c-invalid);
+}
+
+.emptyText {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--c-muted);
+}
+
+.dailySection {
+  margin-top: var(--spacing-stack-comfortable);
+  border-radius: 0.75rem;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface-soft);
+  padding: var(--spacing-inset-comfortable);
+}
+
+.dailyTitle {
+  font-size: 0.75rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--c-fg-soft);
+}
+
+.dailyActions {
+  margin-top: var(--spacing-stack-tight);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-stack-tight);
+}
+
+.needLogin {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--c-muted);
+}
+
+.historySection {
+  margin-top: var(--spacing-stack-comfortable);
+  border-radius: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--c-border) 70%, transparent);
+  background: var(--c-surface);
+  padding: var(--spacing-inset-tight);
+}
+
+.historyTitle {
+  font-size: 0.6875rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--c-fg-soft);
+}
+
+.historyEmpty {
+  margin-top: var(--spacing-stack-xs);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--c-muted);
+}
+
+.historyList {
+  margin-top: var(--spacing-stack-xs);
+  display: grid;
+  gap: var(--spacing-stack-xs);
+}
+
+.historyItem {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--c-fg-soft);
+}
+
+.claimError {
+  margin-top: var(--spacing-stack-tight);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--c-invalid);
+}
+
+.carouselRoot {
+  display: grid;
+  height: calc(92vh - 18rem);
+  gap: var(--spacing-stack-comfortable);
+  overflow: hidden;
+}
+
+.carouselMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--c-muted);
+}
+
+.viewport {
+  overflow: hidden;
+  border-radius: 0.75rem;
+}
+
+.track {
+  display: flex;
+  height: 100%;
+  transition: transform 300ms ease-out;
+}
+
+.slide {
+  display: grid;
+  width: 100%;
+  flex-shrink: 0;
+  grid-template-rows: auto auto 1fr auto;
+  gap: var(--spacing-stack-comfortable);
+  overflow: auto;
+  padding-right: 0.25rem;
+}
+
+.slideTitle {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: var(--c-fg);
+}
+
+.imageFrame {
+  position: relative;
+  height: 14rem;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  border: 1px solid var(--c-border);
+}
+
+.payload {
+  white-space: pre-wrap;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--c-fg-soft);
+}
+
+.validUntil {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--c-warning);
+}
+
+.navRow {
+  margin-top: var(--spacing-stack-tight);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-stack-tight);
+}
+
+.closeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999rem;
+  color: var(--c-muted);
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.closeButton:hover {
+  color: var(--c-fg);
+  background-color: var(--c-surface-soft);
+}
