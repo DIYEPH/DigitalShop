@@ -1,0 +1,312 @@
+@mixin surface-card {
+  border-radius: 0.75rem;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+}
+
+@mixin bordered-box {
+  border-radius: 0.75rem;
+  border: 1px solid var(--c-border);
+}
+
+@mixin inset-sm {
+  padding: var(--spacing-inset-comfortable) var(--spacing-inset-tight);
+}
+
+@mixin inset-md {
+  padding: var(--spacing-inset-comfortable);
+}
+
+.sectionHeading {
+  font-size: 0.875rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--c-fg-soft);
+}
+
+.labelMuted {
+  font-size: 0.75rem;
+  color: var(--c-muted);
+}
+
+.textFgSoft {
+  font-size: 0.75rem;
+  color: var(--c-fg-soft);
+}
+
+.monoStrong {
+  margin-top: var(--spacing-stack-xs);
+  border-radius: 0.5rem;
+  border: 1px solid var(--c-border);
+  background: var(--c-bg-page);
+  padding: var(--spacing-inset-tight) var(--spacing-inset-xs);
+  font-family: var(--font-app-mono), ui-monospace, monospace;
+  font-size: 0.875rem;
+  font-weight: 900;
+  color: var(--c-fg);
+  word-break: break-all;
+}
+
+.successTitle {
+  font-size: 1.125rem;
+  font-weight: 900;
+  color: var(--c-success);
+}
+
+.successMessage {
+  margin-top: var(--spacing-stack-xs);
+}
+
+@mixin row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.statusRow {
+  @include row-between;
+  font-size: 0.875rem;
+}
+
+.statusPill {
+  border-radius: 999rem;
+  padding-inline: var(--spacing-inset-tight);
+  padding-block: var(--spacing-inset-xs);
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--c-warning) 20%, transparent);
+  color: var(--c-warning);
+}
+
+.countdownLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--c-muted);
+}
+
+.countdownValue {
+  font-size: 1.125rem;
+  font-weight: 900;
+  color: var(--c-warning);
+}
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-stack-tight);
+}
+
+.rowTop {
+  display: grid;
+  gap: var(--spacing-stack-xs);
+  @media (width >= 48rem) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.cardSuccess {
+  @include surface-card;
+  @include inset-sm;
+  @media (width >= 48rem) {
+    grid-column: span 2;
+  }
+}
+
+.cardStatus {
+  @include surface-card;
+  @include inset-sm;
+}
+
+.rowMid {
+  display: grid;
+  gap: var(--spacing-stack-xs);
+  @media (width >= 64rem) {
+    grid-template-columns: 17.5rem minmax(0, 1fr);
+  }
+}
+
+.panelPad {
+  @include surface-card;
+  @include inset-md;
+}
+
+.instrStack {
+  margin-top: var(--spacing-stack-tight);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-stack-tight);
+}
+
+.insetBox {
+  @include bordered-box;
+  padding: var(--spacing-inset-tight);
+}
+
+.amountXL {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: var(--c-fg);
+}
+
+.kvCard {
+  @include bordered-box;
+  padding: var(--spacing-inset-tight);
+  font-size: 0.875rem;
+}
+
+.kvRow {
+  @include row-between;
+}
+
+.kvMuted {
+  color: var(--c-muted);
+}
+
+.kvStrong {
+  font-weight: 700;
+  color: var(--c-fg);
+}
+
+.kvSemibold {
+  font-weight: 600;
+  color: var(--c-fg);
+}
+
+.kvStack {
+  margin-top: var(--spacing-stack-xs);
+}
+
+.binanceGrid {
+  margin-top: var(--spacing-stack-tight);
+  display: grid;
+  gap: var(--spacing-stack-tight);
+  @media (width >= 48rem) {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+  }
+}
+
+.qrColumn {
+  border-radius: 0.75rem;
+  border: 1px dashed var(--c-border);
+  padding: var(--spacing-inset-tight);
+}
+
+.qrTitle {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--c-fg);
+}
+
+.qrHint {
+  font-size: 0.75rem;
+  color: var(--c-muted);
+}
+
+.qrPlaceholder {
+  margin-top: var(--spacing-stack-xs);
+  display: grid;
+  aspect-ratio: 1;
+  width: 100%;
+  max-width: 11.25rem;
+  place-items: center;
+  border-radius: 0.5rem;
+  border: 1px dashed var(--c-border);
+  background: var(--c-bg-page);
+  font-size: 0.6875rem;
+  color: var(--c-muted);
+}
+
+.orCircle {
+  display: none;
+  @media (width >= 48rem) {
+    display: grid;
+    height: 2rem;
+    width: 2rem;
+    place-items: center;
+    border-radius: 999rem;
+    border: 1px solid var(--c-border);
+    font-size: 0.75rem;
+    font-weight: 900;
+    color: var(--c-muted);
+  }
+}
+
+.idColumn {
+  @include bordered-box;
+  padding: var(--spacing-inset-tight);
+}
+
+.idTitle {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--c-fg);
+}
+
+.idHint {
+  font-size: 0.75rem;
+  color: var(--c-muted);
+}
+
+.copyStack {
+  margin-top: var(--spacing-stack-xs);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-stack-tight);
+}
+
+.copyBlock {
+  border-radius: 0.5rem;
+  border: 1px solid var(--c-border);
+  background: var(--c-bg-page);
+  padding: var(--spacing-inset-tight) var(--spacing-inset-xs);
+}
+
+.copyLabel {
+  font-size: 0.6875rem;
+  color: var(--c-muted);
+}
+
+.copyValue {
+  word-break: break-all;
+  font-weight: 700;
+  color: var(--c-fg);
+}
+
+.howToPanel {
+  @include surface-card;
+  @include inset-md;
+}
+
+.stepsGrid {
+  margin-top: var(--spacing-stack-tight);
+  display: grid;
+  gap: var(--spacing-stack-xs);
+  @media (width >= 48rem) {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+.stepCard {
+  @include bordered-box;
+  padding: var(--spacing-inset-tight);
+}
+
+.stepLabel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--c-muted);
+}
+
+.stepVisual {
+  margin-top: var(--spacing-stack-xs);
+  display: grid;
+  height: 4rem;
+  place-items: center;
+  border-radius: 0.5rem;
+  border: 1px dashed var(--c-border);
+  background: var(--c-bg-page);
+  font-size: 0.625rem;
+  color: var(--c-muted);
+}
