@@ -1,0 +1,99 @@
+.loginCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--spacing-inset-relaxed);
+}
+
+@media (width >= 40rem) {
+  .loginCard {
+    padding: var(--spacing-inset-spacious);
+  }
+}
+
+.softFg {
+  color: var(--c-fg-soft);
+}
+
+.shell {
+  padding-inline: var(--spacing-inset-relaxed);
+  padding-bottom: var(--spacing-inset-relaxed);
+  padding-top: 0;
+}
+
+@media (width >= 40rem) {
+  .shell {
+    padding-inline: var(--spacing-inset-spacious);
+    padding-bottom: var(--spacing-inset-spacious);
+  }
+}
+
+.loading {
+  font-size: 0.875rem;
+  color: var(--c-muted);
+}
+
+.errorBanner {
+  border-radius: 0.75rem;
+  padding: var(--spacing-inset-comfortable);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--c-invalid);
+  background: color-mix(in srgb, var(--c-invalid) 10%, transparent);
+}
+
+.paymentSection {
+  margin-top: var(--spacing-stack-tight);
+}
+
+.statusBar {
+  margin-bottom: var(--spacing-stack-comfortable);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 0.75rem;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  padding: var(--spacing-inset-comfortable) var(--spacing-inset-tight);
+  font-size: 0.875rem;
+}
+
+.labelMuted {
+  color: var(--c-muted);
+}
+
+.countdownBox {
+  margin-bottom: var(--spacing-stack-comfortable);
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--c-warning) 40%, var(--c-border));
+  background: color-mix(in srgb, var(--c-warning) 10%, transparent);
+  padding: var(--spacing-inset-comfortable) var(--spacing-inset-tight);
+  font-size: 0.875rem;
+}
+
+.countdownRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-stack-comfortable);
+}
+
+.countdownLabel {
+  font-weight: 600;
+  color: var(--c-fg);
+}
+
+.countdownClock {
+  font-size: 1.125rem;
+  font-weight: 900;
+  color: var(--c-warning);
+}
+
+.instructionsTitle {
+  font-size: 0.875rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--c-fg-soft);
+}

@@ -1,0 +1,22 @@
+.grid {
+  margin-top: var(--spacing-stack-tight);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--spacing-stack-tight);
+  font-size: 0.875rem;
+}
+
+.dt {
+  color: var(--c-muted);
+}
+
+.ddMono {
+  word-break: break-all;
+  font-family: var(--font-app-mono), ui-monospace, monospace;
+  color: var(--c-fg);
+}
+
+.ddStrong {
+  font-weight: 700;
+  color: var(--c-fg);
+}
