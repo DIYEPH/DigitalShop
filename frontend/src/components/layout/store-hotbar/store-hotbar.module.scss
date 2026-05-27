@@ -1,0 +1,21 @@
+.wrap {
+  width: 100%;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-stack-comfortable);
+  align-items: center;
+}
+
+.tab {
+  flex-shrink: 0;
+}
+
+.tabs button.tab.tabActive {
+  --btn-bg: var(--c-primary-soft);
+  --btn-fg: var(--c-primary-strong);
+  --btn-border-color: var(--c-primary-strong);
+  --btn-shadow: none;
+}
