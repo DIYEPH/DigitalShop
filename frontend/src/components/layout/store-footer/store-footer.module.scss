@@ -1,0 +1,25 @@
+.footer {
+  border-top: 1px solid var(--c-border);
+  padding: var(--spacing-inset-loose) var(--spacing-inset-spacious);
+  font-size: 0.875rem;
+  color: var(--c-muted);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-stack-tight);
+}
+
+.brand {
+  font-weight: 600;
+  color: var(--c-fg-soft);
+}
+
+.rights {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: inherit;
+}
