@@ -1,0 +1,55 @@
+.body {
+  min-width: 0;
+  flex: 1;
+}
+
+.label {
+  font-size: 0.6875rem;
+  font-weight: 800;
+  color: color-mix(in srgb, var(--c-header-fg) 85%, transparent);
+}
+
+.amountRow {
+  margin-top: var(--spacing-stack-xs);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-stack-xs);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--c-header-fg) 85%, transparent);
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  border-radius: 1.25rem;
+  padding: 0.65rem 0.85rem;
+  min-width: 14.5rem;
+  background: linear-gradient(135deg, var(--c-balance-grad-1), var(--c-balance-grad-2));
+  opacity: 0.5;
+  border: 0.0625rem solid var(--c-glass-border);
+  box-shadow: 0 0.75rem 2rem var(--c-glass-shadow-strong);
+}
+
+.plus {
+  margin-left: auto;
+  width: 2.05rem;
+  height: 2.05rem;
+  border-radius: 999rem;
+  background: var(--c-glass-bg-soft);
+  border: 0.0625rem solid var(--c-glass-border-soft);
+  color: var(--c-header-fg);
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 0.4rem 1rem var(--c-glass-shadow-strong);
+}
+
+.dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999rem;
+  background: var(--c-success);
+  box-shadow: 0 0 0 0.15rem var(--c-success-soft);
+}
+
