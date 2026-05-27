@@ -1,0 +1,33 @@
+.wrap {
+  position: relative;
+}
+
+.btn {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 999rem;
+  border: 0.0625rem solid var(--c-border);
+  background: var(--c-glass-bg);
+  box-shadow: 0 0.4rem 1rem var(--c-glass-shadow);
+  font-size: 1rem;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.select {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  z-index: 20;
+  border-radius: 0.6rem;
+  border: 0.0625rem solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-fg);
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  min-width: 4.25rem;
+}
+
