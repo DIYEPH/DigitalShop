@@ -1,0 +1,219 @@
+                                                                                                                              .topbar {
+  gap: var(--spacing-stack-tight);
+  padding-block: var(--spacing-stack-tight);
+  color: var(--c-fg);
+}
+
+.toprow {
+  display: grid;
+  grid-template-columns: minmax(10rem, 14rem) minmax(16rem, 1fr) auto;
+  gap: var(--spacing-stack-comfortable);
+  padding: 0.35rem 0;
+  align-items: center;
+}
+
+@media (width < 48rem) {
+  .toprow {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .actionsRight {
+    margin-left: auto;
+  }
+
+  .brandTitle {
+    font-size: 1.4rem;
+  }
+
+  .search {
+    max-width: 100%;
+  }
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.logo :global(img) {
+  width: 2.75rem;
+  height: 2.75rem;
+  object-fit: contain;
+  border-radius: inherit;
+}
+
+.logoFallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 999rem;
+  font-size: 0.8rem;
+  font-weight: 950;
+  color: var(--c-header-fg);
+  background: var(--c-header);
+}
+
+.brandTitle {
+  font-weight: 950;
+  letter-spacing: -0.02em;
+  color: var(--c-topbar-title);
+  font-size: 1.75rem;
+  white-space: nowrap;
+}
+
+.brandAccent {
+  color: var(--c-accent);
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 42rem;
+  height: 2.75rem;
+  margin: 0 auto;
+  border-radius: 999rem;
+  background: var(--c-topbar-search-surface);
+  border: 0.0625rem solid var(--c-border);
+  padding: 0 0.4rem 0 1.1rem;
+  box-shadow: inset 0 0.2rem 0.5rem var(--c-topbar-search-inset);
+}
+
+.searchIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999rem;
+  background: var(--c-header);
+  box-shadow: var(--c-header-shadow);
+
+  :global(img) {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+.searchInput {
+  width: 100%;
+  height: 100%;
+  outline: none;
+  background: transparent;
+  font-size: 0.95rem;
+  color: var(--c-topbar-search-fg);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.avatar {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 999rem;
+  background: radial-gradient(
+    circle at 30% 30%,
+    var(--c-topbar-avatar-grad-1),
+    var(--c-topbar-avatar-grad-2)
+  );
+  border: 0.125rem solid var(--c-topbar-avatar-border);
+  box-shadow: 0 0.4rem 1rem var(--c-topbar-avatar-shadow);
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatarWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.35rem 0.15rem 0.15rem;
+  border-radius: 999rem;
+  border: 0.0625rem solid var(--c-border);
+  background: var(--c-topbar-avatar-wrap-surface);
+  box-shadow: 0 0.4rem 1rem var(--c-topbar-avatar-wrap-shadow);
+  cursor: pointer;
+}
+
+.caret {
+  font-size: 0.9rem;
+  font-weight: 900;
+  color: var(--c-topbar-caret);
+}
+
+.accountMenu {
+  position: relative;
+  display: inline-flex;
+}
+
+.accountDropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.5rem);
+  z-index: 30;
+  min-width: 13rem;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 0.0625rem solid var(--c-border);
+  background: var(--c-surface);
+  box-shadow: 0 0.75rem 1.75rem var(--c-panel-shadow);
+  padding: 0.35rem;
+}
+
+.accountItem {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  border-radius: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--c-fg-soft);
+}
+
+.accountItem:hover {
+  background: var(--c-primary-soft);
+  color: var(--c-primary-strong);
+}
+
+.actionsRight {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.tabsCard {
+  align-self: stretch;
+  background: var(--c-glass-bg-strong);
+  border-color: var(--c-glass-border);
+  padding: 0.15rem;
+  box-shadow: 0 0.45rem 0.85rem -0.45rem var(--c-card-shadow);
+}
