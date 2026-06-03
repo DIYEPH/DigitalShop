@@ -1,0 +1,16 @@
+@use "../../domain/catalog/feedback" as fb;
+
+.root {
+  display: grid;
+  gap: var(--spacing-stack-loose);
+}
+
+.errorBanner {
+  @include fb.error-banner-comfortable;
+  border-color: color-mix(in srgb, var(--c-invalid) 42%, transparent);
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--c-invalid) 16%, transparent), transparent 35%),
+    color-mix(in srgb, var(--c-invalid) 10%, var(--c-card));
+  color: var(--c-invalid);
+  font-weight: 900;
+}
