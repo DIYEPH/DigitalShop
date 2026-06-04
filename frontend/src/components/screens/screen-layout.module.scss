@@ -1,0 +1,116 @@
+.max4xl {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 56rem;
+}
+
+.max6xl {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 72rem;
+}
+
+.screenHeader {
+  margin-bottom: var(--spacing-stack-loose);
+}
+
+.screenLead {
+  max-width: 40rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--c-fg-soft);
+}
+
+.headingCart {
+  margin-top: var(--spacing-stack-tight);
+  margin-bottom: var(--spacing-stack-tight);
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 950;
+  line-height: 1;
+  color: var(--c-title);
+}
+
+@media (width >= 40rem) {
+  .headingCart {
+    font-size: 2.5rem;
+  }
+}
+
+.headingCheckout {
+  margin-top: var(--spacing-stack-tight);
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 950;
+  line-height: 1;
+  color: var(--c-title);
+}
+
+@media (width >= 40rem) {
+  .headingCheckout {
+    font-size: 2.5rem;
+  }
+}
+
+.promoWrap {
+  width: 100%;
+}
+
+.promoCard {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 58rem;
+  padding: var(--spacing-inset-relaxed);
+  border-color: var(--c-primary-soft-strong);
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--c-warning) 22%, transparent), transparent 34%),
+    linear-gradient(135deg, color-mix(in srgb, var(--c-primary) 12%, transparent), transparent 42%),
+    var(--c-card);
+}
+
+@media (width >= 40rem) {
+  .promoCard {
+    padding: var(--spacing-inset-loose);
+  }
+}
+
+.promoTitle {
+  margin-top: var(--spacing-stack-tight);
+  max-width: 42rem;
+  font-size: clamp(1.5rem, 3vw, 2.15rem);
+  font-weight: 950;
+  line-height: 1.05;
+  color: var(--c-title);
+}
+
+.promoDesc {
+  margin-top: var(--spacing-stack-tight);
+  max-width: 42rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--c-fg-soft);
+}
+
+.promoActions {
+  margin-top: var(--spacing-stack-loose);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-stack-comfortable);
+}
+
+.kicker {
+  font-size: 0.75rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c-primary-strong);
+}
+
+.categories {
+  display: grid;
+  gap: var(--spacing-stack-relaxed);
+}
+
+.catHeading {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: var(--c-fg);
+}
