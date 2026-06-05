@@ -1,0 +1,21 @@
+.select {
+  width: 100%;
+  border-radius: 0.875rem;
+  border: 0.0625rem solid var(--c-border);
+  background-color: var(--c-surface);
+  color: var(--c-fg);
+  padding: 0.625rem 0.875rem;
+  outline: none;
+}
+
+.select:focus {
+  border-color: var(--c-primary);
+  box-shadow: 0 0 0 0.1875rem var(--c-focus-ring);
+}
+
+.select[aria-invalid="true"],
+.select[data-invalid="true"] {
+  border-color: var(--c-invalid);
+  box-shadow: 0 0 0 0.1875rem var(--c-invalid-ring);
+}
+

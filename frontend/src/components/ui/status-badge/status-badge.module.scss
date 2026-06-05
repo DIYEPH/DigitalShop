@@ -1,0 +1,24 @@
+.badge {
+  border-radius: 999rem;
+  padding-inline: var(--spacing-inset-tight);
+  padding-block: var(--spacing-inset-xs);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ok {
+  background: color-mix(in srgb, var(--c-success) 15%, transparent);
+  color: var(--c-success);
+}
+
+.bad {
+  background: color-mix(in srgb, var(--c-invalid) 12%, transparent);
+  color: var(--c-invalid);
+}
+
+.pending {
+  background: color-mix(in srgb, var(--c-warning) 15%, transparent);
+  color: var(--c-warning);
+}
