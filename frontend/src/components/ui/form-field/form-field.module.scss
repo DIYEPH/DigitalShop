@@ -1,0 +1,18 @@
+.label {
+  display: block;
+  font-size: 0.85em;
+  font-weight: 700;
+  color: var(--c-muted);
+}
+
+.hint {
+  margin-top: var(--spacing-stack-xs);
+  display: block;
+  font-size: 0.75rem;
+  color: var(--c-muted);
+}
+
+.control {
+  margin-top: var(--spacing-stack-tight);
+}
+
