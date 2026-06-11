@@ -1,0 +1,22 @@
+{
+  "cart": {
+    "title": "Your Cart",
+    "empty": "Your cart is empty.",
+    "emptyTitle": "Your cart is empty",
+    "emptyHint": "Start with a digital account, then return here to review quantity, discounts and payment options.",
+    "subtotal": "Subtotal",
+    "total": "Total",
+    "quantity": "Qty",
+    "decreaseQty": "Decrease quantity",
+    "increaseQty": "Increase quantity",
+    "remove": "Remove",
+    "continueShopping": "Continue shopping",
+    "goToCheckout": "Go to checkout",
+    "itemCount": "items",
+    "salePrice": "Price",
+    "tierFrom": "from {count}",
+    "originalPrice": "Original",
+    "bulkDiscount": "Bulk discount",
+    "orderSummary": "Order summary"
+  }
+}

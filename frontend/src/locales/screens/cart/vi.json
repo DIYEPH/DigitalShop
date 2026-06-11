@@ -1,0 +1,22 @@
+{
+  "cart": {
+    "title": "Giỏ hàng",
+    "empty": "Giỏ hàng đang trống.",
+    "emptyTitle": "Giỏ hàng trống",
+    "emptyHint": "Hãy chọn tài khoản số trước, sau đó quay lại đây để kiểm tra số lượng, giảm giá và phương thức thanh toán.",
+    "subtotal": "Tạm tính",
+    "total": "Tổng cộng",
+    "quantity": "SL",
+    "decreaseQty": "Giảm số lượng",
+    "increaseQty": "Tăng số lượng",
+    "remove": "Xoá",
+    "continueShopping": "Tiếp tục mua",
+    "goToCheckout": "Thanh toán",
+    "itemCount": "Sản phẩm",
+    "salePrice": "Giá bán",
+    "tierFrom": "từ {count}",
+    "originalPrice": "Giá gốc",
+    "bulkDiscount": "Giảm theo số lượng",
+    "orderSummary": "Tổng đơn hàng"
+  }
+}
