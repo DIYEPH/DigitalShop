@@ -1,0 +1,51 @@
+{
+  "brand": "Hello Store",
+  "tagline": "Tài khoản số",
+  "nav": {
+    "home": "Trang chủ",
+    "store": "Cửa hàng",
+    "deals": "Khuyến mãi",
+    "cart": "Giỏ hàng",
+    "account": "Tài khoản",
+    "checkout": "Thanh toán",
+    "search": "Tìm kiếm..."
+  },
+  "hero": {
+    "headline": "Sale Mùa Hè",
+    "subHeadline": "Giảm đến 50%",
+    "badge": "Tài khoản số",
+    "cta": "Bắt đầu"
+  },
+  "layout": {
+    "openAccountMenu": "Mở menu tài khoản",
+    "updateProfile": "Cập nhật thông tin cá nhân",
+    "changePassword": "Đổi mật khẩu",
+    "logout": "Đăng xuất",
+    "myBalance": "Số dư",
+    "addBalance": "Nạp thêm số dư",
+    "orders": "Đơn hàng",
+    "primaryNav": "Điều hướng chính",
+    "switchLanguage": "Chuyển ngôn ngữ",
+    "toEnglish": "Tiếng Anh",
+    "toVietnamese": "Tiếng Việt",
+    "toggleTheme": "Đổi giao diện",
+    "allRightsReserved": "Đã đăng ký bản quyền.",
+    "eventButton": "Sự kiện",
+    "eventModalTitle": "Thông báo sự kiện",
+    "eventModalEmpty": "Hiện chưa có sự kiện đang hoạt động.",
+    "eventModalClose": "Đóng",
+    "eventModalPrevious": "Trước",
+    "eventModalNext": "Sau",
+    "eventModalCounter": "Sự kiện {current}/{total}",
+    "eventModalValidUntil": "Hiệu lực đến: {time}",
+    "eventModalCreatedAt": "Tạo lúc: {time}",
+    "eventModalDailyPointTitle": "Điểm danh nhận POINT",
+    "eventModalDailyPointClaim": "Nhận +{points} POINT",
+    "eventModalDailyPointClaimed": "Đã nhận hôm nay (+{points} POINT)",
+    "eventModalDailyPointNeedLogin": "Đăng nhập để nhận điểm danh.",
+    "eventModalDailyPointFailed": "Không thể nhận điểm danh.",
+    "eventModalDailyPointMonthTitle": "Điểm danh tháng này",
+    "eventModalDailyPointEmptyMonth": "Tháng này chưa có lần điểm danh nào.",
+    "eventModalDailyPointDay": "Ngày {day}: +{points} POINT"
+  }
+}

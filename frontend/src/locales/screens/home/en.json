@@ -1,0 +1,51 @@
+{
+  "brand": "Hello Store",
+  "tagline": "Digital Accounts",
+  "nav": {
+    "home": "Home",
+    "store": "Store",
+    "deals": "Deals",
+    "cart": "Cart",
+    "account": "Account",
+    "checkout": "Checkout",
+    "search": "Search..."
+  },
+  "hero": {
+    "headline": "Hot Summer Sale",
+    "subHeadline": "Up to 50% OFF",
+    "badge": "Digital Accounts",
+    "cta": "Get Started"
+  },
+  "layout": {
+    "openAccountMenu": "Open account menu",
+    "updateProfile": "Update profile",
+    "changePassword": "Change password",
+    "logout": "Log out",
+    "myBalance": "My Balance",
+    "addBalance": "Add balance",
+    "orders": "Orders",
+    "primaryNav": "Primary navigation",
+    "switchLanguage": "Switch language",
+    "toEnglish": "English",
+    "toVietnamese": "Vietnamese",
+    "toggleTheme": "Toggle theme",
+    "allRightsReserved": "All rights reserved.",
+    "eventButton": "Events",
+    "eventModalTitle": "Event announcements",
+    "eventModalEmpty": "There are no active events right now.",
+    "eventModalClose": "Close",
+    "eventModalPrevious": "Previous",
+    "eventModalNext": "Next",
+    "eventModalCounter": "Event {current}/{total}",
+    "eventModalValidUntil": "Valid until: {time}",
+    "eventModalCreatedAt": "Created at: {time}",
+    "eventModalDailyPointTitle": "Daily login point",
+    "eventModalDailyPointClaim": "Claim +{points} POINT",
+    "eventModalDailyPointClaimed": "Claimed today (+{points} POINT)",
+    "eventModalDailyPointNeedLogin": "Sign in to claim daily point.",
+    "eventModalDailyPointFailed": "Failed to claim daily point.",
+    "eventModalDailyPointMonthTitle": "This month check-in",
+    "eventModalDailyPointEmptyMonth": "No check-in yet this month.",
+    "eventModalDailyPointDay": "Day {day}: +{points} POINT"
+  }
+}
