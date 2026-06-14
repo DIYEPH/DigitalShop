@@ -1,0 +1,140 @@
+$primary: #3d3a3a;
+$secondary: #f5f5f5;
+$menu: #eb0025;
+$symbol: #d7092f;
+
+// Neutral
+$neutral-default: #d8d8d8;
+$neutral-medium: #949494;
+$neutral-strong: #7d7d7d;
+$neutral-bg: #3d3d3d;
+
+// Neutral Muted
+$neutral-muted: #888;
+
+// Neutral border
+$neutral-border-soft: #b1aeae;
+
+// Soft info background (legacy value)
+$info-soft-bg: #f0f6ff;
+
+// Typography
+$title-color: #131a2a;
+$body-color-strong: #3d3a3a;
+$muted: #6c757d;
+$dark-1: #353535;
+$dark-2: #414141;
+$disabled-1: #8f8f8f;
+$disabled-2: #ebebeb;
+$text-2: #b2b2b2;
+
+// Special background
+$warning-soft: #fff6eb;
+$date-bg: #d9c0a2;
+
+// Success
+$success-light: #e6fffc;
+$success-soft: #d1faf5;
+$success: #00bbb0;
+// Focus ring for success controls (50% alpha)
+$success-focus-ring: #00bbb080;
+
+// Focus ring for danger controls (50% alpha)
+$danger-focus-ring: #ff4d4d40;
+
+// Info
+$info-light: #eff6ff;
+$info-soft: #ddecff;
+$info: #147dd9;
+
+// Danger
+$danger-light: #fef2f2;
+$danger-soft: #ffdddd;
+$danger: #ff4d4d;
+
+$warning: #5f661f; //#664d03;
+$light: #ffffff;
+
+$warning-bg-subtle: #fff3cd;
+$warning-border-subtle: #ffe69c;
+$warning-text-emphasis: #664d03;
+
+$alert: #fd7e14;
+$alert-soft: #fff3cd;
+$dark-soft: #414141;
+
+// Tab active
+$tab-active-color: #ffe1e6;
+
+// Text/Disabled
+$text-disabled-color: #8f8f8f;
+
+// Link
+$link-color: $info;
+
+// Body
+$body-bg: #f5f5f5;
+$body-color: #3d3a3a;
+
+$border-color: #d8d8d8;
+$border-light-color: #e5e5e5;
+$border-radius: 0.25rem;
+
+$card-bg: #ffffff;
+$card-border-width: 0px;
+
+$badge-color: #1ab1a7;
+
+// Breakpoint
+$breakpoint-xs-min: 375px;
+$breakpoint-sm-min: 768px;
+$breakpoint-md: 991px;
+$breakpoint-lg-min: 992px;
+$breakpoint-lg-medium: 1200px;
+$breakpoint-lg-max: 1440px;
+$breakpoint-xl-min: 1441px;
+$breakpoint-xl-max: 2048px;
+$breakpoint-2xl-min: 2049px;
+
+// Line height
+$line-height-120: 1.2;
+$line-height-150: 1.5;
+
+// Font weight
+$fw-100: 100;
+$fw-200: 200;
+$fw-300: 300;
+$fw-400: 400;
+$fw-500: 500;
+$fw-600: 600;
+$fw-700: 700;
+$fw-800: 800;
+$fw-900: 900;
+$fw-bold: 700;
+$fw-medium: 500;
+$fw-regular: 400;
+
+// Value em and rem
+$value-32: 2em;
+$value-24: 1.5em;
+$value-20: 1.25em;
+$value-18: 1.125em;
+$value-16: 1em;
+$value-14: 0.875em;
+$value-12: 0.75em;
+$value-10: 0.625em;
+$value-8: 0.5em;
+$value-4: 0.25em;
+
+$value-80-rem: 5rem;
+$value-32-rem: 2rem;
+$value-24-rem: 1.5rem;
+$value-20-rem: 1.25rem;
+$value-18-rem: 1.125rem;
+$value-16-rem: 1rem;
+$value-14-rem: 0.875rem;
+$value-12-rem: 0.75rem;
+$value-10-rem: 0.625rem;
+$value-8-rem: 0.5rem;
+$value-4-rem: 0.25rem;
+$value-2-rem: 0.125rem;

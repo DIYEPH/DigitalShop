@@ -1,0 +1,157 @@
+@use "@styles/config" as c;
+
+@mixin text-style($font-size, $font-weight, $line-height) {
+  font-size: $font-size;
+  font-weight: $font-weight;
+  line-height: $line-height;
+}
+
+@mixin text-heading-style($font-size) {
+  @include text-style($font-size, $font-weight: 700, $line-height: 1.2);
+}
+
+@mixin text-body-style($font-size, $font-weight) {
+  @include text-style($font-size: $font-size, $font-weight: $font-weight, $line-height: 1.5);
+}
+
+@mixin flex-direction-justify-align($direction, $justify, $align, $gap) {
+  display: flex;
+  justify-content: $justify;
+  align-items: $align;
+  flex-direction: $direction;
+  gap: $gap;
+}
+
+@mixin size($width, $height) {
+  width: $width;
+  height: $height;
+}
+
+@mixin device-max($max-width) {
+  @media (max-width: $max-width) {
+    @content;
+  }
+}
+
+@mixin device-min($min-width) {
+  @media (min-width: $min-width) {
+    @content;
+  }
+}
+
+@mixin device-responsive($min-width, $max-width) {
+  @media (min-width: $min-width) and (max-width: $max-width) {
+    @content;
+  }
+}
+
+@mixin sp {
+  @media (max-width: c.$breakpoint-md) {
+    @content;
+  }
+}
+
+@mixin pc {
+  @media (min-width: c.$breakpoint-lg-min) {
+    @content;
+  }
+}
+
+@mixin pc-max {
+  @media (min-width: c.$breakpoint-lg-max) {
+    @content;
+  }
+}
+
+
+@mixin pc-medium {
+  @media (max-width: c.$breakpoint-lg-medium) {
+    @content;
+  }
+}
+
+@mixin ellipsis($line-clamp: 1, $white-space) {
+  display: -webkit-box;
+  -webkit-line-clamp: $line-clamp;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: $white-space;
+}
+
+@mixin padding($paddingTop, $paddingBottom, $paddingLeft, $paddingRight) {
+  padding-top: $paddingTop;
+  padding-bottom: $paddingBottom;
+  padding-left: $paddingLeft;
+  padding-right: $paddingRight;
+}
+
+@mixin padding-vertical($padding) {
+  padding-top: $padding;
+  padding-bottom: $padding;
+}
+
+@mixin padding-horizontal($padding) {
+  padding-left: $padding;
+  padding-right: $padding;
+}
+
+@mixin margin($marginTop, $marginBottom, $marginLeft, $marginRight) {
+  margin-top: $marginTop;
+  margin-bottom: $marginBottom;
+  margin-left: $marginLeft;
+  margin-right: $marginRight;
+}
+
+@mixin margin-vertical($margin) {
+  margin-top: $margin;
+  margin-bottom: $margin;
+}
+
+@mixin margin-horizontal($margin) {
+  margin-left: $margin;
+  margin-right: $margin;
+}
+
+@mixin border($border-width, $border-style, $border-color) {
+  border: $border-width $border-style $border-color;
+}
+
+@mixin border-radius($radius) {
+  border-radius: $radius;
+}
+
+@mixin font-size-responsive-sp($size, $size-sp) {
+  font-size: $size;
+
+  @include sp {
+    font-size: $size-sp;
+  }
+}
+
+@mixin font-size-responsive($size, $size-pc) {
+  font-size: $size;
+
+  @include pc {
+    font-size: $size-pc;
+  }
+}
+
+@mixin button-action($bg-color) {
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      opacity: 0.8;
+      background-color: $bg-color !important;
+    }
+  }
+
+  &:active {
+    opacity: 0.5;
+    background-color: $bg-color !important;
+  }
+
+  &:disabled {
+    opacity: 0.8;
+    background-color: $bg-color !important;
+  }
+}

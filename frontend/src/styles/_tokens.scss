@@ -1,0 +1,255 @@
+$tokensLight: (
+  c-primary: #007ea8,
+  c-accent: #ff7eb8,
+  c-warning: #ff9253,
+
+  c-bg-page: #e6f3f8,
+  c-surface: #ffffff,
+  c-surface-soft: #f0fafc,
+  c-frame: #f7fbfc,
+  c-card: #ffffff,
+  c-border: #c8e6ef,
+  c-border-soft: #a8d9e8,
+
+  c-fg: #1e3a47,
+  c-fg-soft: #3d6a7d,
+  c-muted: #64748b,
+
+  c-header: #ffb04a,
+  c-header-fg: #ffffff,
+  c-header-shadow: rgb(255 150 50 / 0.35),
+
+  c-tab: #ffe5a8,
+  c-tab-border: #f9c964,
+  c-tab-fg: #70480f,
+  c-tab-active: #ff9a2e,
+
+  c-btn: #56a43f,
+  c-btn-fg: #ffffff,
+  c-btn-shadow: rgb(71 151 50 / 0.45),
+
+  c-btn-ghost: #ffcf6a,
+  c-btn-ghost-fg: #8a5615,
+
+  c-pill: #ff9253,
+  c-pill-blue: #007ea8,
+  c-pill-pink: #ff5ca6,
+  c-pill-green: #49b955,
+
+  c-page-bg: #edf7fa,
+  c-page-fg: #2d5a6b,
+
+  c-title: #005876,
+
+  c-offer-bg: #ffbd5f,
+  c-offer-fg: #8f4e08,
+
+  c-invalid: #fb7185,
+  c-invalid-ring: rgb(251 113 133 / 0.2),
+  c-focus-ring: rgb(0 126 168 / 0.22),
+
+  // Store topbar / header
+  c-topbar-title: rgb(15 23 42),
+  c-topbar-search-surface: rgb(248 251 255 / 0.95),
+  c-topbar-search-inset: rgb(30 60 120 / 0.08),
+  c-topbar-search-icon: rgb(148 163 184),
+  c-topbar-search-fg: rgb(51 65 85),
+  c-topbar-search-btn-surface: rgb(255 255 255 / 0.9),
+  c-topbar-avatar-grad-1: #7c3aed,
+  c-topbar-avatar-grad-2: #2563eb,
+  c-topbar-avatar-border: rgb(255 255 255 / 0.9),
+  c-topbar-avatar-shadow: rgb(40 60 120 / 0.12),
+  c-topbar-avatar-wrap-surface: rgb(255 255 255 / 0.88),
+  c-topbar-avatar-wrap-shadow: rgb(40 60 120 / 0.1),
+  c-topbar-caret: rgb(100 116 139),
+
+  c-card-shadow: rgb(0 80 110 / 0.12),
+  c-card-border: rgb(200 230 239 / 1),
+
+  // Strong / soft brand (#007ea8 + white text on CTAs)
+  c-primary-strong: #006b8f,
+  c-primary-soft: rgb(0 126 168 / 0.14),
+  c-primary-soft-strong: rgb(0 126 168 / 0.26),
+
+  // Generic glass surfaces (overlays on hero / topbar widgets)
+  c-glass-bg: rgb(255 255 255 / 0.88),
+  c-glass-bg-strong: rgb(255 255 255 / 0.92),
+  c-glass-bg-soft: rgb(255 255 255 / 0.18),
+  c-glass-border: rgb(255 255 255 / 0.55),
+  c-glass-border-soft: rgb(255 255 255 / 0.25),
+  c-glass-shadow: rgb(0 90 120 / 0.10),
+  c-glass-shadow-strong: rgb(0 70 100 / 0.16),
+
+  c-panel-shadow: rgb(0 100 130 / 0.14),
+
+  c-success: #22c55e,
+  c-success-soft: rgb(34 197 94 / 0.20),
+
+  c-balance-grad-1: rgb(0 126 168 / 0.92),
+  c-balance-grad-2: rgb(28 163 196 / 0.92),
+);
+
+$tokensDark: (
+  c-bg-page: #070b16,
+  c-surface: #111827,
+  c-surface-soft: #0b1120,
+  c-frame: #0b1020,
+  c-card: #172033,
+  c-border: rgb(125 211 252 / 0.20),
+  c-border-soft: rgb(125 211 252 / 0.12),
+
+  c-fg: #f8fafc,
+  c-fg-soft: #cbd5e1,
+  c-muted: #8ea3bd,
+
+  c-header: #d97706,
+  c-header-fg: #ffffff,
+  c-header-shadow: rgb(245 158 11 / 0.30),
+
+  c-tab: #334155,
+  c-tab-border: #475569,
+  c-tab-fg: #fbbf24,
+  c-tab-active: #ea580c,
+
+  c-page-bg: #0f172a,
+  c-page-fg: #cbd5e1,
+
+  c-title: #fbbf24,
+  c-accent: #f472b6,
+  c-warning: #fb923c,
+  c-invalid: #fb7185,
+  c-invalid-ring: rgb(251 113 133 / 0.24),
+  c-focus-ring: rgb(94 201 232 / 0.30),
+
+  c-pill: #ea580c,
+  c-pill-blue: #2563eb,
+  c-pill-pink: #db2777,
+  c-pill-green: #16a34a,
+
+  c-topbar-title: #f1f5f9,
+  c-topbar-search-surface: rgb(15 23 42 / 0.92),
+  c-topbar-search-inset: rgb(0 0 0 / 0.2),
+  c-topbar-search-icon: #94a3b8,
+  c-topbar-search-fg: #e2e8f0,
+  c-topbar-search-btn-surface: rgb(30 41 59 / 0.95),
+  c-topbar-avatar-grad-1: #8b5cf6,
+  c-topbar-avatar-grad-2: #3b82f6,
+  c-topbar-avatar-border: rgb(255 255 255 / 0.2),
+  c-topbar-avatar-shadow: rgb(0 0 0 / 0.25),
+  c-topbar-avatar-wrap-surface: rgb(15 23 42 / 0.88),
+  c-topbar-avatar-wrap-shadow: rgb(0 0 0 / 0.2),
+  c-topbar-caret: #94a3b8,
+
+  c-card-shadow: rgb(0 0 0 / 0.48),
+  c-card-border: rgb(125 211 252 / 0.20),
+
+  c-primary: #38bdf8,
+  c-primary-strong: #7dd3fc,
+  c-primary-soft: rgb(56 189 248 / 0.18),
+  c-primary-soft-strong: rgb(56 189 248 / 0.36),
+
+  c-glass-bg: rgb(15 23 42 / 0.82),
+  c-glass-bg-strong: rgb(15 23 42 / 0.92),
+  c-glass-bg-soft: rgb(125 211 252 / 0.08),
+  c-glass-border: rgb(125 211 252 / 0.18),
+  c-glass-border-soft: rgb(255 255 255 / 0.08),
+  c-glass-shadow: rgb(0 0 0 / 0.34),
+  c-glass-shadow-strong: rgb(0 0 0 / 0.50),
+
+  c-panel-shadow: rgb(0 0 0 / 0.35),
+
+  c-success: #22c55e,
+  c-success-soft: rgb(34 197 94 / 0.25),
+
+  c-balance-grad-1: rgb(168 85 247 / 0.92),
+  c-balance-grad-2: rgb(59 130 246 / 0.92),
+);
+
+@function tokenVarName($key) {
+  @return "--#{$key}";
+}
+
+@mixin emitTokens($tokens) {
+  @each $key, $value in $tokens {
+    #{tokenVarName($key)}: #{$value};
+  }
+}
+
+:root {
+  @include emitTokens($tokensLight);
+}
+
+// Dark mode uses data-scheme (NOT data-theme)
+:root[data-scheme="dark"] {
+  @include emitTokens($tokensDark);
+}
+
+// --- Season overrides (data-theme) ---
+// Keep overrides minimal: only tweak key brand surfaces.
+$summer: (
+  c-header: #ffb04a,
+  c-primary: #ff9800,
+  c-bg-page: #e6f1ff,
+  c-frame: #ffffff,
+);
+$autumn: (
+  c-header: #c2410c,
+  c-primary: #ea580c,
+  c-bg-page: #fff7ed,
+  c-frame: #ffffff,
+);
+$christmas: (
+  c-header: #e11d48,
+  c-primary: #e11d48,
+  c-bg-page: #ecfdf5,
+  c-frame: #ffffff,
+);
+$lunar: (
+  c-header: #f59e0b,
+  c-primary: #f59e0b,
+  c-bg-page: #fff7ed,
+  c-frame: #ffffff,
+);
+
+:root[data-theme="summer"] { @include emitTokens($summer); }
+:root[data-theme="autumn"] { @include emitTokens($autumn); }
+:root[data-theme="christmas"] { @include emitTokens($christmas); }
+:root[data-theme="lunar_new_year"] { @include emitTokens($lunar); }
+
+// Dark + season overrides must preserve dark surfaces.
+:root[data-scheme="dark"][data-theme="summer"] {
+  @include emitTokens((
+    c-header: #d97706,
+    c-primary: #38bdf8,
+    c-primary-strong: #7dd3fc,
+    c-bg-page: #070b16,
+    c-frame: #0b1020,
+    c-card: #172033,
+    c-topbar-title: #f8fafc,
+  ));
+}
+:root[data-scheme="dark"][data-theme="autumn"] {
+  @include emitTokens((
+    c-header: #9a3412,
+    c-bg-page: #120d09,
+    c-frame: #1c1510,
+    c-topbar-title: #fff7ed,
+  ));
+}
+:root[data-scheme="dark"][data-theme="christmas"] {
+  @include emitTokens((
+    c-header: #be123c,
+    c-bg-page: #07130d,
+    c-frame: #0f1f17,
+    c-topbar-title: #f8fafc,
+  ));
+}
+:root[data-scheme="dark"][data-theme="lunar_new_year"] {
+  @include emitTokens((
+    c-header: #b45309,
+    c-bg-page: #160b06,
+    c-frame: #21130d,
+    c-topbar-title: #fff7ed,
+  ));
+}
+
