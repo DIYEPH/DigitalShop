@@ -1,0 +1,24 @@
+@use "./tokens";
+@use "./fonts";
+@use "./themes/default.scss";
+@use "./themes/event.scss";
+@use "./themes/halloween.scss";
+
+.store-card {
+  border: 0.0625rem solid var(--c-card-border);
+  border-radius: 1.15rem;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--c-primary) 8%, transparent), transparent 36%),
+    var(--c-card);
+  box-shadow:
+    0 1.25rem 3rem color-mix(in srgb, var(--c-card-shadow) 85%, transparent),
+    inset 0 0.0625rem 0 var(--c-glass-border-soft);
+}
+
+.store-panel {
+  border: 0.0625rem solid var(--c-border);
+  border-radius: 1rem;
+  background: var(--c-surface);
+  box-shadow: 0 0.75rem 2rem var(--c-panel-shadow);
+}
+

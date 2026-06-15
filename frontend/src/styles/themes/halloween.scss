@@ -1,0 +1,79 @@
+@use "./variables.scss" as *;
+
+:root[data-theme="halloween"] {
+  /* Button overrides - spooky purple/orange */
+  --btn-primary-bg: #9c27b0;
+  --btn-primary-bg-hover: #7b1fa2;
+  --btn-primary-bg-active: #4a148c;
+  --btn-primary-fg: #ffffff;
+  --btn-primary-border: #ff9800;
+  --btn-primary-border-hover: #ffb74d;
+  --btn-primary-border-active: #f57c00;
+  --btn-primary-border-width: 3px;
+  --btn-primary-shadow: 0 0 10px #ff5722, 0 0 25px #f44336;
+  --btn-primary-shadow-hover: 0 0 12px #ff9800, 0 0 28px #f44336;
+  --btn-primary-shadow-active: 0 0 8px #e65100, 0 0 20px #bf360c;
+  --btn-primary-animation: fire-flicker 1.2s infinite alternate ease-in-out;
+
+  --btn-secondary-bg: #3d1e4d;
+  --btn-secondary-bg-hover: #2a1536;
+  --btn-secondary-bg-active: #1a0d21;
+  --btn-secondary-fg: #f8bbd0;
+  --btn-secondary-border: #e91e63;
+  --btn-secondary-border-hover: #f48fb1;
+  --btn-secondary-border-active: #ad1457;
+  --btn-secondary-shadow: none;
+  --btn-secondary-shadow-hover: none;
+  --btn-secondary-shadow-active: none;
+
+  --btn-outline-bg: transparent;
+  --btn-outline-bg-hover: #4a148c20;
+  --btn-outline-bg-active: #7b1fa240;
+  --btn-outline-fg: #f8bbd0;
+  --btn-outline-border: #e91e63;
+  --btn-outline-border-hover: #ff80ab;
+  --btn-outline-border-active: #c2185b;
+  --btn-outline-shadow: 0 0.35rem 0.85rem rgba(233, 30, 99, 0.2);
+  --btn-outline-shadow-hover: 0 0.4rem 1rem rgba(233, 30, 99, 0.28);
+  --btn-outline-shadow-active: 0 0.25rem 0.65rem rgba(233, 30, 99, 0.35);
+
+  --btn-ghost-bg: transparent;
+  --btn-ghost-bg-hover: #4a148c15;
+  --btn-ghost-bg-active: #7b1fa230;
+  --btn-ghost-fg: #f8bbd0;
+  --btn-ghost-border: transparent;
+  --btn-ghost-border-hover: transparent;
+  --btn-ghost-border-active: transparent;
+  --btn-ghost-shadow: none;
+  --btn-ghost-shadow-hover: none;
+  --btn-ghost-shadow-active: none;
+
+  --btn-danger-bg: #f44336;
+  --btn-danger-bg-hover: #d32f2f;
+  --btn-danger-bg-active: #b71c1c;
+  --btn-danger-fg: #ffffff;
+  --btn-danger-border: #f44336;
+  --btn-danger-border-hover: #ef5350;
+  --btn-danger-border-active: #c62828;
+  --btn-danger-shadow: 0 0.5rem 1rem rgba(244, 67, 54, 0.35);
+  --btn-danger-shadow-hover: 0 0.55rem 1.1rem rgba(244, 67, 54, 0.42);
+  --btn-danger-shadow-active: 0 0.4rem 0.85rem rgba(211, 47, 47, 0.45);
+
+  --btn-focus-ring: rgba(233, 30, 99, 0.4);
+  --btn-disabled-opacity: 0.65;
+
+  /* Some token overrides for Halloween feel */
+  --c-header: #ff5722;
+  --c-accent: #e91e63;
+  --c-primary: #9c27b0;
+}
+
+@keyframes fire-flicker {
+  0% {
+    box-shadow: 0 0 10px #ff5722, 0 0 25px #f44336;
+  }
+  100% {
+    box-shadow: 0 0 15px #ff9800, 0 0 35px #ff5722;
+  }
+}
+

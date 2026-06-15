@@ -1,0 +1,43 @@
+@use "./variables.scss" as *;
+
+:root[data-theme="event"] {
+  --btn-primary-bg: #ff6a00;
+  --btn-primary-bg-hover: #ff7a1a;
+  --btn-primary-bg-active: #ff8a33;
+  --btn-primary-fg: #ffffff;
+  --btn-primary-border: #ff6a00;
+  --btn-primary-shadow: 0 0.5rem 1rem rgba(255, 106, 0, 0.35);
+
+
+  --btn-outline-bg: transparent;
+  --btn-outline-bg-hover: #fff1e0;
+  --btn-outline-bg-active: #ffe6cc;
+  --btn-outline-fg: #cc5a00;
+  --btn-outline-border: #ff8a33;
+  --btn-outline-shadow: 0 0.35rem 0.85rem rgba(255, 133, 51, 0.18);
+
+  --btn-ghost-bg: transparent;
+  --btn-ghost-bg-hover: #fff1e0;
+  --btn-ghost-bg-active: #ffe6cc;
+  --btn-ghost-fg: #cc5a00;
+  --btn-ghost-border: transparent;
+  --btn-ghost-shadow: none;
+
+  --btn-secondary-bg: #fff1e0;
+  --btn-secondary-bg-hover: #ffe6cc;
+  --btn-secondary-bg-active: #ffd9b3;
+  --btn-secondary-fg: #cc5a00;
+  --btn-secondary-border: #ffbb77;
+  --btn-secondary-shadow: none;
+
+  --btn-danger-bg: #d92d20;
+  --btn-danger-bg-hover: #c81e1e;
+  --btn-danger-bg-active: #b11c1c;
+  --btn-danger-fg: #ffffff;
+  --btn-danger-border: #d92d20;
+  --btn-danger-shadow: 0 0.5rem 1rem rgba(217, 45, 32, 0.25);
+
+
+  --btn-focus-ring: rgba(255, 122, 26, 0.35);
+  --btn-disabled-opacity: 0.6;
+}

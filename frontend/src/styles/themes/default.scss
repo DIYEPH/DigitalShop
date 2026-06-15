@@ -1,0 +1,243 @@
+@use "@styles/config" as *;
+@use "./variables.scss" as *;
+
+:root {
+  // Neutral colors
+  --neutral-50: #{$neutral-50};
+  --neutral-100: #{$neutral-100};
+  --neutral-200: #{$neutral-200};
+  --neutral-300: #{$neutral-300};
+  --neutral-400: #{$neutral-400};
+  --neutral-500: #{$neutral-500};
+  --neutral-600: #{$neutral-600};
+  --neutral-700: #{$neutral-700};
+  --neutral-800: #{$neutral-800};
+  --neutral-900: #{$neutral-900};
+  --neutral-950: #{$neutral-950};
+
+  // Primary colors
+  --primary-50: #{$primary-50};
+  --primary-100: #{$primary-100};
+  --primary-200: #{$primary-200};
+  --primary-300: #{$primary-300};
+  --primary-400: #{$primary-400};
+  --primary-500: #{$primary-500};
+  --primary-600: #{$primary-600};
+  --primary-700: #{$primary-700};
+  --primary-800: #{$primary-800};
+  --primary-900: #{$primary-900};
+  --primary-950: #{$primary-950};
+
+  // Success colors
+  --success: #{$success};
+  --success-50: #{$success-50};
+  --success-100: #{$success-100};
+  --success-200: #{$success-200};
+  --success-300: #{$success-300};
+  --success-400: #{$success-400};
+  --success-500: #{$success-500};
+  --success-600: #{$success-600};
+  --success-700: #{$success-700};
+  --success-800: #{$success-800};
+  --success-900: #{$success-900};
+  --success-950: #{$success-950};
+
+  // Warning colors
+  --warning-50: #{$warning-50};
+  --warning-100: #{$warning-100};
+  --warning-200: #{$warning-200};
+  --warning-300: #{$warning-300};
+  --warning-400: #{$warning-400};
+  --warning-500: #{$warning-500};
+  --warning-600: #{$warning-600};
+  --warning-700: #{$warning-700};
+  --warning-800: #{$warning-800};
+  --warning-900: #{$warning-900};
+  --warning-950: #{$warning-950};
+
+  // Info colors
+  --info-50: #{$info-50};
+  --info-100: #{$info-100};
+  --info-200: #{$info-200};
+  --info-300: #{$info-300};
+  --info-400: #{$info-400};
+  --info-500: #{$info-500};
+  --info-600: #{$info-600};
+  --info-700: #{$info-700};
+  --info-800: #{$info-800};
+  --info-900: #{$info-900};
+  --info-950: #{$info-950};
+
+  // Danger colors
+  --danger-50: #{$danger-50};
+  --danger-100: #{$danger-100};
+  --danger-200: #{$danger-200};
+  --danger-300: #{$danger-300};
+  --danger-400: #{$danger-400};
+  --danger-500: #{$danger-500};
+  --danger-600: #{$danger-600};
+  --danger-700: #{$danger-700};
+  --danger-800: #{$danger-800};
+  --danger-900: #{$danger-900};
+  --danger-950: #{$danger-950};
+
+  --background-color: #{$background-color};
+  --surface-color: #{$surface-color};
+
+  // Config variables
+  --primary: #{$primary};
+  --secondary: #{$secondary};
+  --menu: #{$menu};
+  --symbol: #{$symbol};
+
+  --neutral-default: #{$neutral-default};
+  --neutral-strong: #{$neutral-strong};
+
+  --title-color: #{$title-color};
+  --body-color-strong: #{$body-color-strong};
+  --muted: #{$muted};
+  --dark-1: #{$dark-1};
+  --dark-2: #{$dark-2};
+  --disabled-1: #{$disabled-1};
+  --disabled-2: #{$disabled-2};
+  --text-2: #{$text-2};
+
+  --warning-soft: #{$warning-soft};
+  --date-bg: #{$date-bg};
+
+  --success-light: #{$success-light};
+  --success-soft: #{$success-soft};
+  --success: #{$success};
+
+  --info-light: #{$info-light};
+  --info-soft: #{$info-soft};
+  --info: #{$info};
+
+  --danger-light: #{$danger-light};
+  --danger-soft: #{$danger-soft};
+  --danger: #{$danger};
+
+  --warning: #{$warning};
+  --light: #{$light};
+
+  --bg-white: #{$card-bg};
+  --bg-light: #{$body-bg};
+  --tab-active-color: #{$tab-active-color};
+  --text-disabled-color: #{$text-disabled-color};
+  --border-color: #{$border-color};
+  --border-light-color: #{$border-light-color};
+  --badge-color: #{$badge-color};
+
+  // Button tokens
+  --btn-primary-bg: #{$btn-primary-bg};
+  --btn-primary-bg-hover: #{$btn-primary-bg-hover};
+  --btn-primary-bg-active: #{$btn-primary-bg-active};
+  --btn-primary-fg: #{$btn-primary-fg};
+  --btn-primary-border: #{$btn-primary-border};
+  --btn-primary-border-hover: #{$btn-primary-border-hover};
+  --btn-primary-border-active: #{$btn-primary-border-active};
+  --btn-primary-shadow: #{$btn-primary-shadow};
+  --btn-primary-shadow-hover: #{$btn-primary-shadow-hover};
+  --btn-primary-shadow-active: #{$btn-primary-shadow-active};
+  --btn-primary-border-width: 0.0625rem;
+  --btn-primary-animation: none;
+
+  --btn-outline-bg: #{$btn-outline-bg};
+  --btn-outline-bg-hover: #{$btn-outline-bg-hover};
+  --btn-outline-bg-active: #{$btn-outline-bg-active};
+  --btn-outline-fg: #{$btn-outline-fg};
+  --btn-outline-border: #{$btn-outline-border};
+  --btn-outline-border-hover: #{$btn-outline-border-hover};
+  --btn-outline-border-active: #{$btn-outline-border-active};
+  --btn-outline-shadow: #{$btn-outline-shadow};
+  --btn-outline-shadow-hover: #{$btn-outline-shadow-hover};
+  --btn-outline-shadow-active: #{$btn-outline-shadow-active};
+  --btn-outline-border-width: 0.125rem;
+  --btn-outline-animation: none;
+
+  --btn-ghost-bg: #{$btn-ghost-bg};
+  --btn-ghost-bg-hover: #{$btn-ghost-bg-hover};
+  --btn-ghost-bg-active: #{$btn-ghost-bg-active};
+  --btn-ghost-fg: #{$btn-ghost-fg};
+  --btn-ghost-fg-hover: #{$btn-ghost-fg-hover};
+  --btn-ghost-fg-active: #{$btn-ghost-fg-active};
+  --btn-ghost-border: #{$btn-ghost-border};
+  --btn-ghost-border-hover: #{$btn-ghost-border-hover};
+  --btn-ghost-border-active: #{$btn-ghost-border-active};
+  --btn-ghost-shadow: #{$btn-ghost-shadow};
+  --btn-ghost-shadow-hover: #{$btn-ghost-shadow-hover};
+  --btn-ghost-shadow-active: #{$btn-ghost-shadow-active};
+  --btn-ghost-border-width: #{$btn-ghost-border-width};
+  --btn-ghost-animation: none;
+
+  --btn-secondary-bg: #{$btn-secondary-bg};
+  --btn-secondary-bg-hover: #{$btn-secondary-bg-hover};
+  --btn-secondary-bg-active: #{$btn-secondary-bg-active};
+  --btn-secondary-fg: #{$btn-secondary-fg};
+  --btn-secondary-border: #{$btn-secondary-border};
+  --btn-secondary-border-hover: #{$btn-secondary-border-hover};
+  --btn-secondary-border-active: #{$btn-secondary-border-active};
+  --btn-secondary-shadow: #{$btn-secondary-shadow};
+  --btn-secondary-shadow-hover: #{$btn-secondary-shadow-hover};
+  --btn-secondary-shadow-active: #{$btn-secondary-shadow-active};
+  --btn-secondary-border-width: 0.0625rem;
+  --btn-secondary-animation: none;
+
+  --btn-danger-bg: #{$btn-danger-bg};
+  --btn-danger-bg-hover: #{$btn-danger-bg-hover};
+  --btn-danger-bg-active: #{$btn-danger-bg-active};
+  --btn-danger-fg: #{$btn-danger-fg};
+  --btn-danger-border: #{$btn-danger-border};
+  --btn-danger-border-hover: #{$btn-danger-border-hover};
+  --btn-danger-border-active: #{$btn-danger-border-active};
+  --btn-danger-shadow: #{$btn-danger-shadow};
+  --btn-danger-shadow-hover: #{$btn-danger-shadow-hover};
+  --btn-danger-shadow-active: #{$btn-danger-shadow-active};
+  --btn-danger-border-width: 0.0625rem;
+  --btn-danger-animation: none;
+
+  --btn-focus-ring: #{$btn-focus-ring};
+  --btn-disabled-opacity: #{$btn-disabled-opacity};
+}
+
+:root[data-scheme="dark"] {
+  --btn-primary-bg: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%);
+  --btn-primary-bg-hover: linear-gradient(135deg, #7dd3fc 0%, #3b82f6 100%);
+  --btn-primary-bg-active: #1d4ed8;
+  --btn-primary-fg: #ffffff;
+  --btn-primary-border: rgb(125 211 252 / 0.48);
+  --btn-primary-border-hover: rgb(125 211 252 / 0.72);
+  --btn-primary-border-active: rgb(96 165 250 / 0.72);
+  --btn-primary-shadow: 0 0.75rem 1.75rem rgb(37 99 235 / 0.30);
+  --btn-primary-shadow-hover: 0 0.9rem 2.25rem rgb(56 189 248 / 0.26);
+  --btn-primary-shadow-active: 0 0.45rem 1rem rgb(37 99 235 / 0.24);
+
+  --btn-outline-bg: rgb(15 23 42 / 0.42);
+  --btn-outline-bg-hover: rgb(56 189 248 / 0.14);
+  --btn-outline-bg-active: rgb(56 189 248 / 0.22);
+  --btn-outline-fg: var(--c-primary-strong);
+  --btn-outline-border: rgb(125 211 252 / 0.34);
+  --btn-outline-border-hover: rgb(125 211 252 / 0.58);
+  --btn-outline-border-active: rgb(125 211 252 / 0.70);
+  --btn-outline-shadow: 0 0.5rem 1.25rem rgb(0 0 0 / 0.24);
+
+  --btn-ghost-bg: rgb(255 255 255 / 0.06);
+  --btn-ghost-bg-hover: rgb(56 189 248 / 0.14);
+  --btn-ghost-bg-active: rgb(56 189 248 / 0.20);
+  --btn-ghost-fg: var(--c-fg);
+  --btn-ghost-fg-hover: var(--c-primary-strong);
+  --btn-ghost-fg-active: var(--c-primary-strong);
+  --btn-ghost-border: rgb(255 255 255 / 0.08);
+  --btn-ghost-border-hover: rgb(125 211 252 / 0.24);
+  --btn-ghost-border-active: rgb(125 211 252 / 0.32);
+  --btn-ghost-border-width: 0.0625rem;
+
+  --btn-secondary-bg: rgb(30 41 59 / 0.92);
+  --btn-secondary-bg-hover: rgb(51 65 85 / 0.96);
+  --btn-secondary-bg-active: rgb(71 85 105 / 0.96);
+  --btn-secondary-fg: var(--c-fg);
+  --btn-secondary-border: rgb(148 163 184 / 0.18);
+  --btn-secondary-border-hover: rgb(148 163 184 / 0.28);
+
+  --btn-focus-ring: rgb(56 189 248 / 0.34);
+}
