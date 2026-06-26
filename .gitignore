@@ -53,3 +53,16 @@ Thumbs.db
 # Deployment
 .vercel/
 .netlify/
+
+# Internal docs and AI/editor assistant files
+docs/
+**/docs/
+skills/
+**/skills/
+*.mdc
+AGENTS.md
+**/AGENTS.md
+CLAUDE.md
+**/CLAUDE.md
+SKILL.md
+**/SKILL.md
