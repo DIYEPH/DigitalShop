@@ -1,0 +1,89 @@
+services:
+  admin-backend:
+    image: ${ADMIN_BACKEND_IMAGE:?Set ADMIN_BACKEND_IMAGE in .env}
+    container_name: digitalshop-admin-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-3d}
+      REFRESH_TOKEN_EXPIRES_IN: ${REFRESH_TOKEN_EXPIRES_IN:-30d}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:4100}
+      BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
+      ENABLE_RATE_LIMITING: ${ENABLE_RATE_LIMITING:-true}
+      MAX_REQUESTS_PER_MINUTE: ${MAX_REQUESTS_PER_MINUTE:-1000}
+      LOG_LEVEL: ${ADMIN_LOG_LEVEL:-info}
+      LOG_FORMAT: ${ADMIN_LOG_FORMAT:-json}
+      HEALTH_CHECK_TIMEOUT: ${HEALTH_CHECK_TIMEOUT:-5000}
+    ports:
+      - "${ADMIN_BACKEND_HOST_PORT:-3000}:3000"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:3000/ping').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  backend-bot:
+    image: ${BACKEND_BOT_IMAGE:?Set BACKEND_BOT_IMAGE in .env}
+    container_name: digitalshop-backend-bot
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env}
+      BOT_INTERNAL_SECRET: ${BOT_INTERNAL_SECRET:?Set BOT_INTERNAL_SECRET in .env}
+      BINANCE_API_KEY: ${BINANCE_API_KEY:-}
+      BINANCE_SECRET_KEY: ${BINANCE_SECRET_KEY:-}
+      BINANCE_PAY_ID: ${BINANCE_PAY_ID:-}
+      BINANCE_PAY_QR_URL: ${BINANCE_PAY_QR_URL:-}
+      SEPAY_API_KEY: ${SEPAY_API_KEY:-}
+      BANK_NAME: ${BANK_NAME:-}
+      BANK_ACCOUNT: ${BANK_ACCOUNT:-}
+      BANK_OWNER: ${BANK_OWNER:-}
+      BANK_BIN: ${BANK_BIN:-}
+      PENDING_ORDER_SYNC_ENABLED: ${PENDING_ORDER_SYNC_ENABLED:-true}
+      PENDING_ORDER_SYNC_POLL_MS: ${PENDING_ORDER_SYNC_POLL_MS:-30000}
+      PENDING_ORDER_SYNC_BATCH_SIZE: ${PENDING_ORDER_SYNC_BATCH_SIZE:-100}
+      DAILY_LOGIN_POINTS_REWARD: ${DAILY_LOGIN_POINTS_REWARD:-5}
+      DAILY_LOGIN_TIMEZONE: ${DAILY_LOGIN_TIMEZONE:-Asia/Ho_Chi_Minh}
+      REFERRAL_REFERRER_BONUS: ${REFERRAL_REFERRER_BONUS:-1}
+      REFERRAL_REFEREE_BONUS: ${REFERRAL_REFEREE_BONUS:-1}
+    ports:
+      - "${BACKEND_BOT_HOST_PORT:-3001}:3001"
+
+  bot-binance-pay:
+    image: ${BOT_BINANCE_PAY_IMAGE:?Set BOT_BINANCE_PAY_IMAGE in .env}
+    container_name: digitalshop-bot-binance-pay
+    restart: unless-stopped
+    depends_on:
+      - backend-bot
+    environment:
+      NODE_ENV: production
+      BOT_TOKEN: ${BOT_TOKEN:?Set BOT_TOKEN in .env}
+      BOT_USERNAME: ${BOT_USERNAME:-}
+      SHOP_NAME: ${SHOP_NAME:-DigitalShop}
+      ADMIN_IDS: ${ADMIN_IDS:?Set ADMIN_IDS in .env}
+      ADMIN_USER_NAME: ${ADMIN_USER_NAME:-}
+      BACKEND_API_BASE_URL: ${BACKEND_API_BASE_URL:-http://backend-bot:3001}
+      BACKEND_BOT_SECRET: ${BACKEND_BOT_SECRET:?Set BACKEND_BOT_SECRET in .env}
+      BACKEND_REQUEST_TIMEOUT_MS: ${BACKEND_REQUEST_TIMEOUT_MS:-8000}
+      BINANCE_API_KEY: ${BINANCE_API_KEY:-}
+      BINANCE_SECRET_KEY: ${BINANCE_SECRET_KEY:-}
+      BINANCE_PAY_ID: ${BINANCE_PAY_ID:-}
+      SEPAY_API_KEY: ${SEPAY_API_KEY:-}
+      BANK_ENABLED: ${BANK_ENABLED:-true}
+      BANK_ACCOUNT: ${BANK_ACCOUNT:-}
+      BANK_NAME: ${BANK_NAME:-}
+      BANK_OWNER: ${BANK_OWNER:-}
+      BANK_BIN: ${BANK_BIN:-}
+      REFERRER_BONUS: ${REFERRER_BONUS:-1}
+      REFEREE_BONUS: ${REFEREE_BONUS:-0.5}
+      MIN_DEPOSIT_FOR_BONUS: ${MIN_DEPOSIT_FOR_BONUS:-5}
+      DEPOSIT_EXPIRES_MINUTES: ${DEPOSIT_EXPIRES_MINUTES:-15}
