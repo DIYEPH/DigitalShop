@@ -2,7 +2,6 @@ const BackendProduct = require('../services/backend-product');
 const Referral = require('../services/referral');
 const Events = require('../services/events');
 const BackendWallet = require('../services/backend-wallet');
-const { formatPrice } = require('../utils/helpers');
 const {
   formatBinanceTopupMessage,
   formatBankTopupMessage,

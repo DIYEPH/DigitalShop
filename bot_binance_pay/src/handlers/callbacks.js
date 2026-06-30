@@ -17,7 +17,6 @@ const {
   loadCheckoutProductVariant,
   parsePayMethodCallback,
   buildPaymentScreenLines,
-  presentBinanceOrderPayment,
   presentOrderPayment,
   formatOrderCreatedMessage,
   formatOrderResumeMessage,
@@ -608,7 +607,6 @@ async function handlePendingCancel(ctx) {
 async function handlePaymentMethodSelect(ctx) {
   const userId = ctx.from.id;
   const t = i18n.getTranslator(userId);
-  const langCode = i18n.getUserLang(userId);
   const parsed = parsePayMethodCallback(ctx.callbackQuery.data);
 
   if (!parsed) {

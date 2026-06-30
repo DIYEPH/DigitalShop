@@ -2,6 +2,7 @@
 
 This deployment runs these services on an Oracle A1 Flex VPS:
 
+- `admin-frontend`
 - `admin-backend`
 - `backend-bot`
 - `bot_binance_pay`
@@ -29,6 +30,7 @@ nano /opt/digitalshop/.env
 The important values are:
 
 - `DATABASE_URL`: Neon connection string, including SSL mode if Neon requires it.
+- `ADMIN_FRONTEND_API_ORIGIN`: internal URL from `admin-frontend` to `admin-backend`.
 - `JWT_SECRET`: long random secret for `admin-backend`.
 - `BOT_INTERNAL_SECRET`: internal secret accepted by `backend-bot`.
 - `BACKEND_BOT_SECRET`: must equal `BOT_INTERNAL_SECRET`.
@@ -52,7 +54,7 @@ The workflow uses `GITHUB_TOKEN` to push images to GHCR.
 ## First deploy
 
 The GitHub Actions workflow builds ARM64 images for Oracle A1 Flex and deploys
-on push to `main`. You can also run it manually from the Actions tab:
+on push to `release`. You can also run it manually from the Actions tab:
 
 ```text
 Actions -> Deploy VPS -> Run workflow
@@ -79,6 +81,7 @@ Read logs:
 
 ```bash
 docker compose logs -f admin-backend
+docker compose logs -f admin-frontend
 docker compose logs -f backend-bot
 docker compose logs -f bot-binance-pay
 ```
@@ -104,6 +107,7 @@ On the VPS:
 
 ```bash
 cd /opt/digitalshop
+ADMIN_FRONTEND_IMAGE=ghcr.io/OWNER/REPO/admin-frontend:OLD_SHA \
 ADMIN_BACKEND_IMAGE=ghcr.io/OWNER/REPO/admin-backend:OLD_SHA \
 BACKEND_BOT_IMAGE=ghcr.io/OWNER/REPO/backend-bot:OLD_SHA \
 BOT_BINANCE_PAY_IMAGE=ghcr.io/OWNER/REPO/bot-binance-pay:OLD_SHA \
@@ -118,6 +122,8 @@ Replace `OWNER`, `REPO`, and `OLD_SHA` with the image you want to restore.
   are changed to support leader election.
 - Database init/reset scripts are intentionally not run by CI/CD because Neon is
   the production database.
+- `admin-frontend` proxies browser `/api/*` requests at runtime and uses
+  `API_ORIGIN=http://admin-backend:3000` inside the Docker network.
 - `bot_binance_pay` calls `backend-bot` through the Docker network using
   `http://backend-bot:3001`. Do not append `/api` to `BACKEND_API_BASE_URL`
   because the bot code already calls `/api/...` paths.

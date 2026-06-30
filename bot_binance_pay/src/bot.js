@@ -1,7 +1,6 @@
 const { Telegraf } = require('telegraf');
 const config = require('./config');
 const { isBackendEnabled } = require('./services/backend-client');
-const i18n = require('./locales');
 const { extractErrorMessage } = require('./handlers/error-middleware');
 const commandHandlers = require('./handlers/commands');
 const callbackHandlers = require('./handlers/callbacks');

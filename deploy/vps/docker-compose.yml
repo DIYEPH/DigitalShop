@@ -1,4 +1,27 @@
 services:
+  admin-frontend:
+    image: ${ADMIN_FRONTEND_IMAGE:?Set ADMIN_FRONTEND_IMAGE in .env}
+    container_name: digitalshop-admin-frontend
+    restart: unless-stopped
+    depends_on:
+      - admin-backend
+    environment:
+      NODE_ENV: production
+      PORT: 4100
+      API_ORIGIN: ${ADMIN_FRONTEND_API_ORIGIN:-http://admin-backend:3000}
+    ports:
+      - "${ADMIN_FRONTEND_HOST_PORT:-4100}:4100"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:4100').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
   admin-backend:
     image: ${ADMIN_BACKEND_IMAGE:?Set ADMIN_BACKEND_IMAGE in .env}
     container_name: digitalshop-admin-backend
@@ -18,7 +41,7 @@ services:
       LOG_FORMAT: ${ADMIN_LOG_FORMAT:-json}
       HEALTH_CHECK_TIMEOUT: ${HEALTH_CHECK_TIMEOUT:-5000}
     ports:
-      - "${ADMIN_BACKEND_HOST_PORT:-3000}:3000"
+      - "127.0.0.1:${ADMIN_BACKEND_HOST_PORT:-3000}:3000"
     healthcheck:
       test:
         [
@@ -56,7 +79,7 @@ services:
       REFERRAL_REFERRER_BONUS: ${REFERRAL_REFERRER_BONUS:-1}
       REFERRAL_REFEREE_BONUS: ${REFERRAL_REFEREE_BONUS:-1}
     ports:
-      - "${BACKEND_BOT_HOST_PORT:-3001}:3001"
+      - "127.0.0.1:${BACKEND_BOT_HOST_PORT:-3001}:3001"
 
   bot-binance-pay:
     image: ${BOT_BINANCE_PAY_IMAGE:?Set BOT_BINANCE_PAY_IMAGE in .env}

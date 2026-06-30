@@ -7,6 +7,7 @@ on:
     paths:
       - ".github/workflows/deploy-vps.yml"
       - "deploy/vps/**"
+      - "admin-frontend/**"
       - "admin-backend/**"
       - "backend-bot/**"
       - "bot_binance_pay/**"
@@ -48,6 +49,18 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build admin-frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./admin-frontend
+          platforms: ${{ env.PLATFORM }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.names.outputs.namespace }}/admin-frontend:${{ steps.names.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ steps.names.outputs.namespace }}/admin-frontend:latest
+          cache-from: type=gha,scope=admin-frontend
+          cache-to: type=gha,mode=max,scope=admin-frontend
 
       - name: Build admin-backend
         uses: docker/build-push-action@v6
@@ -133,6 +146,7 @@ jobs:
           IMAGE_NAMESPACE: ${{ steps.names.outputs.namespace }}
           IMAGE_TAG: ${{ steps.names.outputs.tag }}
         run: |
+          ADMIN_FRONTEND_IMAGE="${REGISTRY}/${IMAGE_NAMESPACE}/admin-frontend:${IMAGE_TAG}"
           ADMIN_BACKEND_IMAGE="${REGISTRY}/${IMAGE_NAMESPACE}/admin-backend:${IMAGE_TAG}"
           BACKEND_BOT_IMAGE="${REGISTRY}/${IMAGE_NAMESPACE}/backend-bot:${IMAGE_TAG}"
           BOT_BINANCE_PAY_IMAGE="${REGISTRY}/${IMAGE_NAMESPACE}/bot-binance-pay:${IMAGE_TAG}"
@@ -140,10 +154,12 @@ jobs:
           ssh -i ~/.ssh/deploy_key "$VPS_USER@$VPS_HOST" \
             "cd '$VPS_DEPLOY_PATH' && \
              if [ -n '$GHCR_READ_TOKEN' ]; then echo '$GHCR_READ_TOKEN' | docker login ghcr.io -u '$GHCR_USERNAME' --password-stdin; fi && \
+             ADMIN_FRONTEND_IMAGE='$ADMIN_FRONTEND_IMAGE' \
              ADMIN_BACKEND_IMAGE='$ADMIN_BACKEND_IMAGE' \
              BACKEND_BOT_IMAGE='$BACKEND_BOT_IMAGE' \
              BOT_BINANCE_PAY_IMAGE='$BOT_BINANCE_PAY_IMAGE' \
              docker compose pull && \
+             ADMIN_FRONTEND_IMAGE='$ADMIN_FRONTEND_IMAGE' \
              ADMIN_BACKEND_IMAGE='$ADMIN_BACKEND_IMAGE' \
              BACKEND_BOT_IMAGE='$BACKEND_BOT_IMAGE' \
              BOT_BINANCE_PAY_IMAGE='$BOT_BINANCE_PAY_IMAGE' \
