@@ -1,6 +1,6 @@
 /**
  * E2E Auth + health (cần Postgres đã seed admin).
- * Chạy: cd backend-nestjs && npm run db:seed
+ * Chạy: cd backend-bot && npm run db:seed
  *       cd admin-backend && npm run test:e2e
  */
 import * as path from "node:path";

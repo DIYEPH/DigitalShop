@@ -1,8 +1,8 @@
 {
-  "name": "backend-nestjs",
+  "name": "backend-bot",
   "version": "1.0.0",
   "private": true,
-  "description": "DigitalShop backend-nestjs clean architecture scaffold",
+  "description": "DigitalShop backend-bot clean architecture scaffold",
   "main": "dist/main.js",
   "scripts": {
     "build": "nest build",

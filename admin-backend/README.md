@@ -1,6 +1,6 @@
 # Admin Backend - DigitalShop
 
-REST API cho admin web. NestJS + `pg` (shared PostgreSQL với `backend-nestjs`).
+REST API cho admin web. NestJS + `pg` (shared PostgreSQL với `backend-bot`).
 
 ## Quick start
 
@@ -17,7 +17,7 @@ npm run start:dev
 | Ping | `GET /ping` |
 | Swagger | `http://localhost:3000/api/admin/docs` |
 
-**Admin login (sau `db:seed` ở backend-nestjs):** `admin@digitalshop.dev` / `password`
+**Admin login (sau `db:seed` ở backend-bot):** `admin@digitalshop.dev` / `password`
 
 ## Trạng thái
 
@@ -37,4 +37,4 @@ Xem **[docs/IMPLEMENTATION_STATUS.md](./docs/IMPLEMENTATION_STATUS.md)** — **A
 ## Integration
 
 - **admin-frontend:** `NEXT_PUBLIC_API_ORIGIN=http://localhost:3000`, gọi `/api/admin/v1/...`
-- **backend-nestjs:** cùng DB; schema/seed từ repo đó
+- **backend-bot:** cùng DB; schema/seed từ repo đó

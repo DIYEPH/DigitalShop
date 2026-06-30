@@ -2,7 +2,7 @@ import { Pool } from "pg";
 
 let pool: Pool | null = null;
 
-/** Shared pg pool (same pattern as backend-nestjs repositories). */
+/** Shared pg pool (same pattern as backend-bot repositories). */
 export function getPgPool(): Pool {
   if (!pool) {
     const url = process.env.DATABASE_URL;

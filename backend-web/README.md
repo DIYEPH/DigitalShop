@@ -4,7 +4,7 @@ Public storefront backend API for the `frontend` Next.js app.
 
 This project is intentionally separate from:
 
-- `backend-nestjs`: bot/internal API, currently exposes Telegram/Bot routes that may require `x-bot-secret`.
+- `backend-bot`: bot/internal API, currently exposes Telegram/Bot routes that may require `x-bot-secret`.
 - `admin-backend`: admin panel API with admin-only contracts.
 - `backend-batch`: batch/background worker concerns.
 

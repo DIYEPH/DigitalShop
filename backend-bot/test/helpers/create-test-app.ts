@@ -40,7 +40,7 @@ export async function createTestApp(options?: CreateTestAppOptions): Promise<INe
 export function botHeaders(): Record<string, string> {
   const secret = process.env.BOT_INTERNAL_SECRET;
   if (!secret) {
-    throw new Error('BOT_INTERNAL_SECRET is required for e2e tests (set in backend-nestjs/.env).');
+    throw new Error('BOT_INTERNAL_SECRET is required for e2e tests (set in backend-bot/.env).');
   }
   return { 'x-bot-secret': secret };
 }
