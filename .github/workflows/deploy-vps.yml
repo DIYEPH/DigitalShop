@@ -3,7 +3,7 @@ name: Deploy VPS
 on:
   push:
     branches:
-      - main
+      - release
     paths:
       - ".github/workflows/deploy-vps.yml"
       - "deploy/vps/**"
