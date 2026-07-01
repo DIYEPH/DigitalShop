@@ -2,6 +2,8 @@ const path = require('node:path');
 const { Client } = require('pg');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
+const SEED_PASSWORD_HASH = '$2b$10$/xGkSIXQuvq/xvtHbU.PW.qfTFeTHr45.mKRROgfb9DSjwki4Ztze';
+
 function assertSafeEnvironment() {
   if (process.env.NODE_ENV === 'production' && process.env.ALLOW_PROD_DB_SCRIPTS !== 'true') {
     throw new Error('Refusing to run DB seed in production without ALLOW_PROD_DB_SCRIPTS=true');
@@ -15,9 +17,9 @@ async function upsertUser(client, user) {
   const result = await client.query(
     `INSERT INTO users (
         email, telegram_id, username, language, full_name, password, topup_code,
-        role, balance_usdt, balance_vnd, balance_point, referral_code, status
+        role, balance_usdt, balance_vnd, balance_point, can_create_shop, referral_code, status
       )
-      VALUES ($1, $2, $3, $4::language_enum, $5, $6, $7, $8::role_enum, $9, $10, $11, $12, 'ACTIVE')
+      VALUES ($1, $2, $3, $4::language_enum, $5, $6, $7, $8::role_enum, $9, $10, $11, $12, $13, 'ACTIVE')
       ON CONFLICT (telegram_id) DO UPDATE SET
         email = EXCLUDED.email,
         username = EXCLUDED.username,
@@ -28,6 +30,7 @@ async function upsertUser(client, user) {
         balance_usdt = EXCLUDED.balance_usdt,
         balance_vnd = EXCLUDED.balance_vnd,
         balance_point = EXCLUDED.balance_point,
+        can_create_shop = EXCLUDED.can_create_shop,
         status = 'ACTIVE',
         updated_at = NOW()
       RETURNING id`,
@@ -37,12 +40,13 @@ async function upsertUser(client, user) {
       user.username,
       user.language,
       user.fullName,
-      user.password,
+      user.passwordHash ?? SEED_PASSWORD_HASH,
       `TG${user.telegramId}`,
       user.role,
       user.balanceUsdt,
       user.balanceVnd,
       user.balancePoint,
+      user.canCreateShop ?? false,
       user.referralCode,
     ],
   );
@@ -276,6 +280,7 @@ async function main() {
   assertSafeEnvironment();
   const adminTelegramId = Number(process.env.SEED_ADMIN_TELEGRAM_ID || 900000001);
   const userTelegramId = Number(process.env.SEED_USER_TELEGRAM_ID || 900000002);
+  const sellerTelegramId = Number(process.env.SEED_SELLER_TELEGRAM_ID || 900000003);
   const client = new Client({ connectionString: process.env.DATABASE_URL });
 
   await client.connect();
@@ -292,6 +297,7 @@ async function main() {
       balanceUsdt: 1000,
       balanceVnd: 1000000,
       balancePoint: 0,
+      canCreateShop: false,
       referralCode: 'ADMINREF',
     });
     await syncUserShopBalance(client, adminId);
@@ -308,9 +314,26 @@ async function main() {
       balanceUsdt: 50,
       balanceVnd: 200000,
       balancePoint: 100,
+      canCreateShop: false,
       referralCode: 'USERREF',
     });
     await syncUserShopBalance(client, userId);
+
+    const sellerId = await upsertUser(client, {
+      email: 'seller@digitalshop.dev',
+      telegramId: sellerTelegramId,
+      username: 'seed_seller',
+      language: 'EN',
+      fullName: 'Seed Seller',
+      password: 'password',
+      role: 'USER',
+      balanceUsdt: 0,
+      balanceVnd: 0,
+      balancePoint: 0,
+      canCreateShop: true,
+      referralCode: 'SELLERREF',
+    });
+    await syncUserShopBalance(client, sellerId);
 
     const variantId = await seedCatalog(client);
     await seedStock(client, variantId);

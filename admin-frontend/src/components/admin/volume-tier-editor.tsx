@@ -9,6 +9,10 @@ import {
   Input,
   Label,
   Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui";
 import { ApiError } from "@/lib/api/client";
 import {
@@ -180,17 +184,17 @@ export default function VolumeTierEditor({
   };
 
   return (
-    <Card className="border-border-subtle bg-muted/30">
+    <Card className="border-brutal bg-brutal-muted">
       <div className="mb-2 flex items-center justify-between">
         <div className="grid">
-          <span className="text-xs font-semibold text-foreground">
+          <span className="text-xs font-semibold text-brutal-fg">
             Bậc theo khối lượng · biến thể #{variantId}
           </span>
           <FieldHint>{variantLabel}</FieldHint>
         </div>
         <div className="flex gap-1">
           <Button
-            uiSize="sm"
+            size="sm"
             variant="ghost"
             type="button"
             onClick={sortRows}
@@ -199,7 +203,7 @@ export default function VolumeTierEditor({
             Sắp xếp
           </Button>
           <Button
-            uiSize="sm"
+            size="sm"
             variant="ghost"
             type="button"
             onClick={addRow}
@@ -208,7 +212,8 @@ export default function VolumeTierEditor({
             + Bậc
           </Button>
           <Button
-            uiSize="sm"
+            size="sm"
+            variant="primary"
             type="button"
             onClick={onSave}
             disabled={loading || saving || hasError}
@@ -219,17 +224,17 @@ export default function VolumeTierEditor({
       </div>
 
       {error ? (
-        <Alert tone="error" className="mb-2" onDismiss={() => setError(null)}>
+        <Alert variant="danger" className="mb-2">
           {error}
         </Alert>
       ) : null}
       {info ? (
-        <Alert tone="success" className="mb-2" onDismiss={() => setInfo(null)}>
+        <Alert variant="success" className="mb-2">
           {info}
         </Alert>
       ) : null}
       {dupCount > 0 ? (
-        <Alert tone="warning" className="mb-2">
+        <Alert variant="warning" className="mb-2">
           Trùng min_quantity: {dupCount}
         </Alert>
       ) : null}
@@ -246,21 +251,21 @@ export default function VolumeTierEditor({
               <div
                 key={idx}
                 className={cn(
-                  "flex flex-wrap items-end gap-2 rounded-lg border bg-surface px-3 py-2",
+                  "flex flex-wrap items-end gap-2 rounded-brutal border-3 bg-brutal-bg px-3 py-2",
                   iss.dup
-                    ? "border-warning"
+                    ? "border-brutal"
                     : iss.mq || iss.bps
-                      ? "border-danger/40"
-                      : "border-border",
+                      ? "border-brutal"
+                      : "border-brutal",
                 )}
               >
                 <label className="grid gap-0.5">
                   <Label>SL tối thiểu</Label>
                   <Input
-                    uiSize="sm"
+                    size="sm"
                     type="number"
                     min={MIN_QTY}
-                    className={cn("w-20", iss.mq && "border-danger")}
+                    className={cn("w-20", iss.mq && "border-brutal")}
                     value={r.min_quantity}
                     onChange={(e) =>
                       setRows((prev) =>
@@ -279,7 +284,7 @@ export default function VolumeTierEditor({
                     }
                   />
                   {iss.mq ? (
-                    <span className="text-[10px] font-semibold text-danger">
+                    <span className="text-[10px] font-semibold text-brutal-destructive">
                       {iss.mq}
                     </span>
                   ) : null}
@@ -287,11 +292,11 @@ export default function VolumeTierEditor({
                 <label className="grid gap-0.5">
                   <Label>Chiết khấu (bps)</Label>
                   <Input
-                    uiSize="sm"
+                    size="sm"
                     type="number"
                     min={MIN_BPS}
                     max={MAX_BPS}
-                    className={cn("w-24", iss.bps && "border-danger")}
+                    className={cn("w-24", iss.bps && "border-brutal")}
                     value={r.discount_bps}
                     onChange={(e) =>
                       setRows((prev) =>
@@ -311,7 +316,7 @@ export default function VolumeTierEditor({
                     placeholder="e.g. 1000"
                   />
                   {iss.bps ? (
-                    <span className="text-[10px] font-semibold text-danger">
+                    <span className="text-[10px] font-semibold text-brutal-destructive">
                       {iss.bps}
                     </span>
                   ) : null}
@@ -322,26 +327,29 @@ export default function VolumeTierEditor({
                 <label className="inline-flex items-center gap-1 pb-1.5">
                   <Label>Hiển thị</Label>
                   <Select
-                    uiSize="sm"
-                    className="w-24"
                     value={String(r.is_active)}
-                    onChange={(e) =>
+                    onValueChange={(value) =>
                       setRows((prev) =>
                         prev.map((x, i) =>
                           i === idx
-                            ? { ...x, is_active: e.target.value === "true" }
+                            ? { ...x, is_active: value === "true" }
                             : x,
                         ),
                       )
                     }
                   >
-                    <option value="true">Có</option>
-                    <option value="false">Không</option>
+                    <SelectTrigger className="h-9 w-24 px-3 py-1 text-sm">
+                      <SelectValue placeholder="Hiển thị" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="true">Có</SelectItem>
+                      <SelectItem value="false">Không</SelectItem>
+                    </SelectContent>
                   </Select>
                 </label>
                 <div className="ml-auto pb-1.5">
                   <Button
-                    uiSize="sm"
+                    size="sm"
                     variant="ghost"
                     type="button"
                     onClick={() => removeRow(idx)}

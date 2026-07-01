@@ -81,11 +81,11 @@ export function RichEditor({ value, onChange, className, placeholder }: Props) {
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-lg border border-border bg-surface",
+        "overflow-hidden rounded-brutal border-3 border-brutal bg-brutal-bg",
         className,
       )}
     >
-      <div className="flex flex-wrap items-center gap-0.5 border-b border-border bg-muted px-1.5 py-1">
+      <div className="flex flex-wrap items-center gap-0.5 border-b-3 border-brutal bg-brutal-muted px-1.5 py-1">
         <ToolBtn title="Bold" onClick={() => exec("bold")}>
           <b>B</b>
         </ToolBtn>
@@ -119,16 +119,16 @@ export function RichEditor({ value, onChange, className, placeholder }: Props) {
             }}
           >
             <span className="text-[10px]">A</span>
-            <span className="absolute bottom-0.5 left-1/2 h-0.5 w-3 -translate-x-1/2 rounded-full bg-danger" />
+            <span className="absolute bottom-0.5 left-1/2 h-0.5 w-3 -translate-x-1/2 rounded-full bg-brutal-destructive" />
           </ToolBtn>
           {showColors ? (
-            <div className="absolute left-0 top-full z-20 mt-1 grid w-fit grid-cols-5 gap-1 rounded-lg border border-border bg-surface p-1.5 shadow-(--shadow-md)">
+            <div className="absolute left-0 top-full z-20 mt-1 grid w-fit grid-cols-5 gap-1 rounded-brutal border-3 border-brutal bg-brutal-bg p-1.5 shadow-brutal">
               {RICH_EDITOR_COLORS.map((c) => (
                 <button
                   key={c}
                   type="button"
                   onClick={() => setColor(c)}
-                  className="h-5 w-5 cursor-pointer rounded border border-border transition-transform hover:scale-110"
+                  className="h-5 w-5 cursor-pointer rounded-brutal border-2 border-brutal transition-transform hover:scale-110"
                   style={{ backgroundColor: c }}
                   title={c}
                 />
@@ -149,13 +149,13 @@ export function RichEditor({ value, onChange, className, placeholder }: Props) {
             <span className="text-[11px]">T</span>
           </ToolBtn>
           {showSizes ? (
-            <div className="absolute left-0 top-full z-20 mt-1 flex gap-0.5 rounded-lg border border-border bg-surface p-1 shadow-(--shadow-md)">
+            <div className="absolute left-0 top-full z-20 mt-1 flex gap-0.5 rounded-brutal border-3 border-brutal bg-brutal-bg p-1 shadow-brutal">
               {FONT_SIZES.map((s) => (
                 <button
                   key={s.value}
                   type="button"
                   onClick={() => setFontSize(s.value)}
-                  className="cursor-pointer whitespace-nowrap rounded px-2 py-1 text-[10px] font-semibold text-foreground hover:bg-muted"
+                  className="cursor-pointer whitespace-nowrap rounded-brutal px-2 py-1 text-[10px] font-semibold text-brutal-fg hover:bg-brutal-muted"
                 >
                   {s.label}
                 </button>
@@ -166,10 +166,10 @@ export function RichEditor({ value, onChange, className, placeholder }: Props) {
 
         <Sep />
         <ToolBtn title="Link" onClick={addLink}>
-          <Link2 className="icon-sm" aria-hidden />
+          <Link2 className="h-4 w-4 shrink-0" aria-hidden />
         </ToolBtn>
         <ToolBtn title="Remove format" onClick={() => exec("removeFormat")}>
-          <X className="icon-sm" aria-hidden />
+          <X className="h-4 w-4 shrink-0" aria-hidden />
         </ToolBtn>
       </div>
 
@@ -185,8 +185,8 @@ export function RichEditor({ value, onChange, className, placeholder }: Props) {
         data-placeholder={placeholder}
         className={cn(
           "max-h-[200px] min-h-[60px] overflow-auto px-2.5 py-2 text-xs outline-none",
-          "empty:before:pointer-events-none empty:before:text-muted-foreground empty:before:content-[attr(data-placeholder)]",
-          "[&_a]:text-accent [&_a]:underline",
+          "empty:before:pointer-events-none empty:before:text-gray-600 empty:before:content-[attr(data-placeholder)]",
+          "[&_a]:text-brutal-primary [&_a]:underline",
           "[&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4",
           "[&_b]:font-bold [&_strong]:font-bold",
         )}
@@ -196,7 +196,7 @@ export function RichEditor({ value, onChange, className, placeholder }: Props) {
 }
 
 function Sep() {
-  return <div className="mx-0.5 h-4 w-px bg-border" />;
+  return <div className="mx-0.5 h-4 w-px bg-brutal-fg" />;
 }
 
 function ToolBtn({
@@ -214,7 +214,7 @@ function ToolBtn({
       title={title}
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
-      className="relative flex h-6 w-6 cursor-pointer items-center justify-center rounded text-[11px] font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      className="relative flex h-6 w-6 cursor-pointer items-center justify-center rounded-brutal text-[11px] font-semibold text-gray-600 transition-colors hover:bg-brutal-muted hover:text-brutal-fg"
     >
       {children}
     </button>

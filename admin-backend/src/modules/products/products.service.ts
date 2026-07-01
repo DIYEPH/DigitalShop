@@ -88,10 +88,10 @@ export class ProductsService {
     return getPgPool();
   }
 
-  async findAll(query: ProductQueryDto) {
+  async findAll(shopId: string, query: ProductQueryDto) {
     const { page, limit, offset } = resolvePagination(query);
-    const params: unknown[] = [];
-    const conditions: string[] = [];
+    const params: unknown[] = [shopId];
+    const conditions: string[] = [`p.shop_id = $1::uuid`];
 
     if (query.category_id != null) {
       params.push(query.category_id);
@@ -162,8 +162,8 @@ export class ProductsService {
     };
   }
 
-  async findOne(id: number) {
-    const product = await this.getProductRow(id);
+  async findOne(shopId: string, id: number) {
+    const product = await this.getProductRow(shopId, id);
     if (!product) {
       throw new NotFoundException({
         code: ErrorCodes.PROD_NOT_FOUND,
@@ -179,8 +179,8 @@ export class ProductsService {
     return this.toDetail(product, plans, variants);
   }
 
-  async create(dto: CreateProductDto) {
-    await this.assertCategoryExists(dto.category_id);
+  async create(shopId: string, dto: CreateProductDto) {
+    await this.assertCategorySelected(shopId, dto.category_id);
 
     const { nameEn, nameVi, descriptionEn, descriptionVi } = this.resolveProductI18n(dto);
     if (!nameEn.trim() || !nameVi.trim()) {
@@ -197,16 +197,16 @@ export class ProductsService {
     }
     let slug = dto.slug ?? slugify(nameEn);
 
-    const unique = await this.validateSlugUnique(slug);
+    const unique = await this.validateSlugUnique(shopId, slug);
     if (!unique) {
       slug = `${slug}-${Date.now().toString(36)}`;
     }
 
     const result = await this.pool.query<ProductRow>(
-      `INSERT INTO products (name_en, name_vi, description_en, description_vi, slug, image_url, category_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO products (shop_id, name_en, name_vi, description_en, description_vi, slug, image_url, category_id)
+       VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8)
        RETURNING id, name_en, name_vi, description_en, description_vi, slug, image_url, category_id, created_at, updated_at`,
-      [nameEn, nameVi, descriptionEn, descriptionVi, slug, dto.image_url ?? null, dto.category_id],
+      [shopId, nameEn, nameVi, descriptionEn, descriptionVi, slug, dto.image_url ?? null, dto.category_id],
     );
 
     const product = result.rows[0];
@@ -221,15 +221,15 @@ export class ProductsService {
           NULL::text AS min_price_usdt
         FROM products p
         INNER JOIN categories c ON c.id = p.category_id
-        WHERE p.id = $1`,
-      [product.id],
+        WHERE p.id = $1 AND p.shop_id = $2::uuid`,
+      [product.id, shopId],
     );
 
     return this.toListItem(withCategory.rows[0]);
   }
 
-  async update(id: number, dto: UpdateProductDto) {
-    const existing = await this.getProductRow(id);
+  async update(shopId: string, id: number, dto: UpdateProductDto) {
+    const existing = await this.getProductRow(shopId, id);
     if (!existing) {
       throw new NotFoundException({
         code: ErrorCodes.PROD_NOT_FOUND,
@@ -238,11 +238,11 @@ export class ProductsService {
     }
 
     if (dto.category_id != null) {
-      await this.assertCategoryExists(dto.category_id);
+      await this.assertCategorySelected(shopId, dto.category_id);
     }
 
     if (dto.slug) {
-      const unique = await this.validateSlugUnique(dto.slug, id);
+      const unique = await this.validateSlugUnique(shopId, dto.slug, id);
       if (!unique) {
         throw new ConflictException({
           code: ErrorCodes.PROD_SLUG_EXISTS,
@@ -263,10 +263,10 @@ export class ProductsService {
           description_en = $4,
           description_vi = $5,
           slug = COALESCE($6, slug),
-          image_url = CASE WHEN $7 THEN NULL WHEN $8 IS NOT NULL THEN $8 ELSE image_url END,
+          image_url = CASE WHEN $7 THEN NULL WHEN $8::text IS NOT NULL THEN $8::text ELSE image_url END,
           category_id = COALESCE($9, category_id),
           updated_at = NOW()
-        WHERE id = $1`,
+        WHERE id = $1 AND shop_id = $10::uuid`,
       [
         id,
         nameEn,
@@ -277,14 +277,15 @@ export class ProductsService {
         clearImage,
         imageUrlValue,
         dto.category_id ?? null,
+        shopId,
       ],
     );
 
-    return this.findOne(id);
+    return this.findOne(shopId, id);
   }
 
-  async remove(id: number) {
-    const existing = await this.getProductRow(id);
+  async remove(shopId: string, id: number) {
+    const existing = await this.getProductRow(shopId, id);
     if (!existing) {
       throw new NotFoundException({
         code: ErrorCodes.PROD_NOT_FOUND,
@@ -306,26 +307,27 @@ export class ProductsService {
       });
     }
 
-    await this.pool.query(`UPDATE product_variants SET is_active = FALSE, updated_at = NOW() WHERE product_id = $1`, [
-      id,
-    ]);
-    await this.pool.query(`DELETE FROM products WHERE id = $1`, [id]);
+    await this.pool.query(
+      `UPDATE product_variants SET is_active = FALSE, updated_at = NOW() WHERE product_id = $1`,
+      [id],
+    );
+    await this.pool.query(`DELETE FROM products WHERE id = $1 AND shop_id = $2::uuid`, [id, shopId]);
   }
 
-  async validateSlugUnique(slug: string, excludeId?: number): Promise<boolean> {
-    const params: unknown[] = [slug];
-    let sql = `SELECT 1 FROM products WHERE slug = $1`;
+  async validateSlugUnique(shopId: string, slug: string, excludeId?: number): Promise<boolean> {
+    const params: unknown[] = [shopId, slug];
+    let sql = `SELECT 1 FROM products WHERE shop_id = $1::uuid AND slug = $2`;
     if (excludeId != null) {
       params.push(excludeId);
-      sql += ` AND id <> $2`;
+      sql += ` AND id <> $3`;
     }
     sql += ' LIMIT 1';
     const res = await this.pool.query(sql, params);
     return res.rowCount === 0;
   }
 
-  async createPlan(productId: number, dto: CreatePlanDto) {
-    await this.assertProductExists(productId);
+  async createPlan(shopId: string, productId: number, dto: CreatePlanDto) {
+    await this.assertProductExists(shopId, productId);
 
     const { nameEn, nameVi } = this.resolvePlanNames(dto);
 
@@ -348,8 +350,8 @@ export class ProductsService {
     }
   }
 
-  async updatePlan(productId: number, planId: number, dto: UpdatePlanDto) {
-    await this.assertPlanBelongsToProduct(productId, planId);
+  async updatePlan(shopId: string, productId: number, planId: number, dto: UpdatePlanDto) {
+    await this.assertPlanBelongsToProduct(shopId, productId, planId);
 
     const existing = await this.pool.query<PlanRow>(
       `SELECT id, product_id, name_en, name_vi, slug, sort_order, is_active FROM product_plans WHERE id = $1 AND product_id = $2`,
@@ -394,8 +396,8 @@ export class ProductsService {
     return this.toPlan(res.rows[0]);
   }
 
-  async removePlan(productId: number, planId: number) {
-    await this.assertPlanBelongsToProduct(productId, planId);
+  async removePlan(shopId: string, productId: number, planId: number) {
+    await this.assertPlanBelongsToProduct(shopId, productId, planId);
     await this.pool.query(
       `UPDATE product_variants SET plan_id = NULL, updated_at = NOW() WHERE plan_id = $1`,
       [planId],
@@ -406,11 +408,11 @@ export class ProductsService {
     ]);
   }
 
-  async createVariant(productId: number, dto: CreateVariantDto) {
-    await this.assertProductExists(productId);
+  async createVariant(shopId: string, productId: number, dto: CreateVariantDto) {
+    await this.assertProductExists(shopId, productId);
 
     if (dto.plan_id != null) {
-      await this.assertPlanBelongsToProduct(productId, dto.plan_id);
+      await this.assertPlanBelongsToProduct(shopId, productId, dto.plan_id);
     }
 
     const { amountUsdt, amountVnd } = resolvePricesForCreate(dto.prices);
@@ -448,12 +450,12 @@ export class ProductsService {
     );
 
     const variant = res.rows[0];
-    const tiers = await this.getVolumeTiers(variant.id);
+    const tiers = await this.getVolumeTiers(shopId, variant.id);
     return this.toVariant(variant, tiers);
   }
 
-  async updateVariant(variantId: number, dto: UpdateVariantDto) {
-    const existing = await this.getVariantRow(variantId);
+  async updateVariant(shopId: string, variantId: number, dto: UpdateVariantDto) {
+    const existing = await this.getVariantRow(shopId, variantId);
     if (!existing) {
       throw new NotFoundException({
         code: ErrorCodes.PROD_VARIANT_NOT_FOUND,
@@ -462,7 +464,7 @@ export class ProductsService {
     }
 
     if (dto.plan_id !== undefined && dto.plan_id != null) {
-      await this.assertPlanBelongsToProduct(existing.product_id, dto.plan_id);
+      await this.assertPlanBelongsToProduct(shopId, existing.product_id, dto.plan_id);
     }
 
     if (dto.fulfillment_type === FulfillmentType.PREORDER) {
@@ -489,7 +491,7 @@ export class ProductsService {
 
     await this.pool.query(
       `UPDATE product_variants SET
-          plan_id = CASE WHEN $2 THEN NULL WHEN $3 IS NOT NULL THEN $3 ELSE plan_id END,
+          plan_id = CASE WHEN $2 THEN NULL WHEN $3::int IS NOT NULL THEN $3::int ELSE plan_id END,
           name_en = COALESCE($4, name_en),
           name_vi = COALESCE($5, name_vi),
           fulfillment_type = COALESCE($6, fulfillment_type),
@@ -525,19 +527,19 @@ export class ProductsService {
       ],
     );
 
-    const variant = await this.getVariantRow(variantId);
+    const variant = await this.getVariantRow(shopId, variantId);
     if (!variant) {
       throw new NotFoundException({
         code: ErrorCodes.PROD_VARIANT_NOT_FOUND,
         message: 'Variant not found',
       });
     }
-    const tiers = await this.getVolumeTiers(variant.id);
+    const tiers = await this.getVolumeTiers(shopId, variant.id);
     return this.toVariant(variant, tiers);
   }
 
-  async removeVariant(variantId: number) {
-    const existing = await this.getVariantRow(variantId);
+  async removeVariant(shopId: string, variantId: number) {
+    const existing = await this.getVariantRow(shopId, variantId);
     if (!existing) {
       throw new NotFoundException({
         code: ErrorCodes.PROD_VARIANT_NOT_FOUND,
@@ -562,8 +564,8 @@ export class ProductsService {
     );
   }
 
-  async getVolumeTiers(variantId: number) {
-    await this.assertVariantExists(variantId);
+  async getVolumeTiers(shopId: string, variantId: number) {
+    await this.assertVariantExists(shopId, variantId);
     const res = await this.pool.query<VolumeTierRow>(
       `SELECT id, variant_id, min_quantity, discount_bps, is_active
        FROM variant_volume_tiers
@@ -574,8 +576,8 @@ export class ProductsService {
     return res.rows.map((t) => this.toVolumeTier(t));
   }
 
-  async replaceVolumeTiers(variantId: number, dto: UpdateVolumeTiersDto) {
-    await this.assertVariantExists(variantId);
+  async replaceVolumeTiers(shopId: string, variantId: number, dto: UpdateVolumeTiersDto) {
+    await this.assertVariantExists(shopId, variantId);
 
     const validation = validateVolumeTiers(dto.tiers);
     if (!validation.isValid) {
@@ -607,18 +609,18 @@ export class ProductsService {
       client.release();
     }
 
-    return this.getVolumeTiers(variantId);
+    return this.getVolumeTiers(shopId, variantId);
   }
 
   validateVolumeTiersPayload(tiers: VolumeTierDto[]) {
     return validateVolumeTiers(tiers);
   }
 
-  private async getProductRow(id: number): Promise<ProductRow | null> {
+  private async getProductRow(shopId: string, id: number): Promise<ProductRow | null> {
     const res = await this.pool.query<ProductRow>(
       `SELECT id, name_en, name_vi, description_en, description_vi, slug, image_url, category_id, created_at, updated_at
-       FROM products WHERE id = $1`,
-      [id],
+       FROM products WHERE id = $1 AND shop_id = $2::uuid`,
+      [id, shopId],
     );
     return res.rows[0] ?? null;
   }
@@ -650,7 +652,7 @@ export class ProductsService {
     return res.rows;
   }
 
-  private async getVariantRow(variantId: number): Promise<VariantRow | null> {
+  private async getVariantRow(shopId: string, variantId: number): Promise<VariantRow | null> {
     const res = await this.pool.query<VariantRow>(
       `SELECT
           v.id, v.product_id, v.plan_id, v.name_en, v.name_vi, v.fulfillment_type,
@@ -660,14 +662,18 @@ export class ProductsService {
           (SELECT COUNT(*)::int FROM stock_items si WHERE si.variant_id = v.id) AS stock_item_count
         FROM product_variants v
         LEFT JOIN product_plans pp ON pp.id = v.plan_id
-        WHERE v.id = $1`,
-      [variantId],
+        INNER JOIN products p ON p.id = v.product_id
+        WHERE v.id = $1 AND p.shop_id = $2::uuid`,
+      [variantId, shopId],
     );
     return res.rows[0] ?? null;
   }
 
-  private async assertProductExists(productId: number) {
-    const res = await this.pool.query(`SELECT 1 FROM products WHERE id = $1`, [productId]);
+  private async assertProductExists(shopId: string, productId: number) {
+    const res = await this.pool.query(
+      `SELECT 1 FROM products WHERE id = $1 AND shop_id = $2::uuid`,
+      [productId, shopId],
+    );
     if (res.rowCount === 0) {
       throw new NotFoundException({
         code: ErrorCodes.PROD_NOT_FOUND,
@@ -676,23 +682,29 @@ export class ProductsService {
     }
   }
 
-  private async assertCategoryExists(categoryId: number) {
+  private async assertCategorySelected(shopId: string, categoryId: number) {
     const res = await this.pool.query(
-      `SELECT 1 FROM categories WHERE id = $1 AND is_active = TRUE`,
-      [categoryId],
+      `SELECT 1
+       FROM shop_categories sc
+       INNER JOIN categories c ON c.id = sc.category_id
+       WHERE sc.shop_id = $1::uuid AND c.id = $2 AND c.is_active = TRUE`,
+      [shopId, categoryId],
     );
     if (res.rowCount === 0) {
       throw new BadRequestException({
         code: ErrorCodes.PROD_INVALID_CATEGORY,
-        message: 'Invalid or inactive category',
+        message: 'Category is not selected for this shop',
       });
     }
   }
 
-  private async assertPlanBelongsToProduct(productId: number, planId: number) {
+  private async assertPlanBelongsToProduct(shopId: string, productId: number, planId: number) {
     const res = await this.pool.query(
-      `SELECT 1 FROM product_plans WHERE id = $1 AND product_id = $2`,
-      [planId, productId],
+      `SELECT 1
+       FROM product_plans pp
+       INNER JOIN products p ON p.id = pp.product_id
+       WHERE pp.id = $1 AND pp.product_id = $2 AND p.shop_id = $3::uuid`,
+      [planId, productId, shopId],
     );
     if (res.rowCount === 0) {
       throw new NotFoundException({
@@ -710,8 +722,14 @@ export class ProductsService {
     return Number(res.rows[0]?.count ?? 0);
   }
 
-  private async assertVariantExists(variantId: number) {
-    const res = await this.pool.query(`SELECT 1 FROM product_variants WHERE id = $1`, [variantId]);
+  private async assertVariantExists(shopId: string, variantId: number) {
+    const res = await this.pool.query(
+      `SELECT 1
+       FROM product_variants v
+       INNER JOIN products p ON p.id = v.product_id
+       WHERE v.id = $1 AND p.shop_id = $2::uuid`,
+      [variantId, shopId],
+    );
     if (res.rowCount === 0) {
       throw new NotFoundException({
         code: ErrorCodes.PROD_VARIANT_NOT_FOUND,

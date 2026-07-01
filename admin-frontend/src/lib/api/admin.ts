@@ -1,68 +1,5 @@
 import { apiFetch, apiFetchPaginated } from "./client";
 
-export type AdminUser = {
-  id: number;
-  email: string | null;
-  username: string | null;
-  full_name: string | null;
-  telegram_id: number;
-  role: "USER" | "ADMIN";
-  status: "ACTIVE" | "BANNED";
-  created_at: string;
-};
-
-export async function adminListUsers(
-  token: string,
-  args: {
-    page?: number;
-    limit?: number;
-    role?: string;
-    status?: string;
-    search?: string;
-  } = {},
-) {
-  const qs = new URLSearchParams();
-  if (args.page) qs.set("page", String(args.page));
-  if (args.limit) qs.set("limit", String(args.limit));
-  if (args.role) qs.set("role", args.role);
-  if (args.status) qs.set("status", args.status);
-  if (args.search) qs.set("search", args.search);
-  return apiFetchPaginated<{ users: AdminUser[] }>(
-    `/api/admin/v1/users?${qs.toString()}`,
-    {
-      method: "GET",
-      token,
-      cache: "no-store",
-    },
-  );
-}
-
-export async function adminSetUserRole(
-  token: string,
-  userId: number,
-  role: "USER" | "ADMIN",
-) {
-  return apiFetch<AdminUser>(`/api/admin/v1/users/${userId}/role`, {
-    method: "PATCH",
-    token,
-    body: { role },
-    cache: "no-store",
-  });
-}
-
-export async function adminSetUserStatus(
-  token: string,
-  userId: number,
-  status: "ACTIVE" | "BANNED",
-) {
-  return apiFetch<AdminUser>(`/api/admin/v1/users/${userId}/status`, {
-    method: "PATCH",
-    token,
-    body: { status },
-    cache: "no-store",
-  });
-}
-
 export type AdminOrder = {
   id: string;
   user: { id: number; email: string } | null;
@@ -279,60 +216,6 @@ export async function adminGrantCouponToUser(
     method: "POST",
     token,
     body: input,
-    cache: "no-store",
-  });
-}
-
-type AdminCategory = {
-  id: number;
-  name: string;
-  slug: string;
-  image_url?: string | null;
-  parent_id?: number | null;
-};
-
-export async function adminListCategoriesFlat(token: string) {
-  // Uses public endpoint but admin panel needs flat list; token not required but provided.
-  return apiFetch<AdminCategory[]>(`/api/admin/v1/categories?flat=true`, {
-    method: "GET",
-    token,
-    cache: "no-store",
-  });
-}
-
-export async function adminCreateCategory(
-  token: string,
-  input: { name: string; parent_id?: number; image_url?: string | null },
-) {
-  return apiFetch<AdminCategory>(`/api/admin/v1/categories`, {
-    method: "POST",
-    token,
-    body: input,
-    cache: "no-store",
-  });
-}
-
-export async function adminUpdateCategory(
-  token: string,
-  id: number,
-  input: {
-    name?: string;
-    parent_id?: number | null;
-    image_url?: string | null;
-  },
-) {
-  return apiFetch<AdminCategory>(`/api/admin/v1/categories/${id}`, {
-    method: "PUT",
-    token,
-    body: input,
-    cache: "no-store",
-  });
-}
-
-export async function adminDeleteCategory(token: string, id: number) {
-  return apiFetch<{ message: string }>(`/api/admin/v1/categories/${id}`, {
-    method: "DELETE",
-    token,
     cache: "no-store",
   });
 }

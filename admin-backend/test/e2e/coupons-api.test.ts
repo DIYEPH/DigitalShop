@@ -8,7 +8,7 @@ import { INestApplication } from "@nestjs/common";
 import request from "supertest";
 import { config } from "dotenv";
 import { getPgPool } from "../../src/common/database/pg-pool";
-import { adminLogin, bearerHeaders } from "../helpers/admin-auth";
+import { adminLogin, bearerHeaders, sellerHeaders } from "../helpers/admin-auth";
 import { createTestApp } from "../helpers/create-test-app";
 
 config({ path: path.resolve(__dirname, "../../.env") });
@@ -20,6 +20,7 @@ const CODE_PREFIX = `E2E_ADMIN_${Date.now().toString(36).toUpperCase()}`;
 describe("Admin API — coupons (e2e)", { skip: !hasDb }, () => {
   let app: INestApplication;
   let token: string;
+  let shopId: string;
   let variantId: number;
   let userId: number;
   const createdCodes: string[] = [];
@@ -29,8 +30,19 @@ describe("Admin API — coupons (e2e)", { skip: !hasDb }, () => {
     token = await adminLogin(app);
 
     const pool = getPgPool();
+    const shopRes = await pool.query<{ id: string }>(
+      `SELECT id::text FROM shops WHERE slug = 'default' LIMIT 1`,
+    );
+    shopId = shopRes.rows[0]?.id;
+    assert.ok(shopId, "Need default shop from seed");
+
     const variantRes = await pool.query<{ id: number }>(
-      `SELECT id FROM product_variants WHERE is_active = TRUE ORDER BY id ASC LIMIT 1`,
+      `SELECT v.id
+       FROM product_variants v
+       INNER JOIN products p ON p.id = v.product_id
+       WHERE v.is_active = TRUE AND p.shop_id = $1::uuid
+       ORDER BY v.id ASC LIMIT 1`,
+      [shopId],
     );
     variantId = variantRes.rows[0]?.id;
     assert.ok(
@@ -69,7 +81,7 @@ describe("Admin API — coupons (e2e)", { skip: !hasDb }, () => {
     createdCodes.push(code);
     const res = await request(app.getHttpServer())
       .post(`${API}/coupons`)
-      .set(bearerHeaders(token))
+      .set(sellerHeaders(token, shopId))
       .send({
         code,
         variant_id: variantId,
@@ -90,7 +102,7 @@ describe("Admin API — coupons (e2e)", { skip: !hasDb }, () => {
   test("GET /coupons — 200 list includes created coupon", async () => {
     const res = await request(app.getHttpServer())
       .get(`${API}/coupons?search=${CODE_PREFIX}`)
-      .set(bearerHeaders(token))
+      .set(sellerHeaders(token, shopId))
       .expect(200);
 
     assert.equal(res.body.success, true);
@@ -105,15 +117,15 @@ describe("Admin API — coupons (e2e)", { skip: !hasDb }, () => {
   test("PATCH /coupons/:id — toggle active", async () => {
     const pool = getPgPool();
     const couponRes = await pool.query<{ id: number }>(
-      `SELECT id FROM coupons WHERE code = $1 LIMIT 1`,
-      [`${CODE_PREFIX}_P10`],
+      `SELECT id FROM coupons WHERE shop_id = $1::uuid AND code = $2 LIMIT 1`,
+      [shopId, `${CODE_PREFIX}_P10`],
     );
     const couponId = couponRes.rows[0]?.id;
     assert.ok(couponId);
 
     const res = await request(app.getHttpServer())
       .patch(`${API}/coupons/${couponId}`)
-      .set(bearerHeaders(token))
+      .set(sellerHeaders(token, shopId))
       .send({ is_active: false })
       .expect(200);
 
@@ -125,7 +137,7 @@ describe("Admin API — coupons (e2e)", { skip: !hasDb }, () => {
     createdCodes.push(code);
     await request(app.getHttpServer())
       .post(`${API}/coupons`)
-      .set(bearerHeaders(token))
+      .set(sellerHeaders(token, shopId))
       .send({
         code,
         variant_id: variantId,
@@ -140,7 +152,7 @@ describe("Admin API — coupons (e2e)", { skip: !hasDb }, () => {
 
     const res = await request(app.getHttpServer())
       .post(`${API}/coupons/grant`)
-      .set(bearerHeaders(token))
+      .set(sellerHeaders(token, shopId))
       .send({ user_ids: String(userId), code, quantity: 1 })
       .expect(201);
 

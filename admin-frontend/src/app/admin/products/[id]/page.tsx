@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
   Alert,
@@ -12,488 +10,118 @@ import {
   Label,
   RichEditor,
   Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Table,
-  TableHeader,
-  TableWrap,
   Textarea,
-  stockBadgeTone,
 } from "@/components/ui";
 import {
   PaymentMethodPicker,
-  PAYMENT_METHOD_OPTIONS,
   type VariantPaymentMethod,
 } from "@/components/admin/payment-method-picker";
-import { ApiError } from "@/lib/api/client";
 import { cn } from "@/lib/cn";
-import {
-  adminAddStock,
-  adminCreatePlan,
-  adminCreateVariant,
-  adminDeletePlan,
-  adminDeleteStock,
-  adminDeleteVariant,
-  adminGetProduct,
-  adminListCategoriesFlat,
-  adminListStock,
-  adminUpdateProduct,
-  adminUpdatePlan,
-  adminUpdateVariant,
-  type AdminPlan,
-  type AdminProductDetail,
-  type AdminStockItem,
-  type AdminVariant,
-} from "@/lib/api/admin";
-import { useAdminToken } from "@/lib/auth/use-admin-token";
-import {
-  buildVariantPricesPayload,
-  formatUsdt,
-  formatVnd,
-  pricesFromVariantList,
-} from "@/lib/format-price";
+import { formatUsdt, formatVnd, pricesFromVariantList } from "@/lib/format-price";
 import VolumeTierEditor from "@/components/admin/volume-tier-editor";
-
-type Category = { id: number; name: string; slug: string };
-type EditableVariant = Partial<AdminVariant> & {
-  preorder_limit?: number | null;
-  preorder_delivery_hours?: number | null;
-  warranty_value?: number | null;
-  warranty_unit?: "HOUR" | "DAY" | "MONTH" | "YEAR" | null;
-  payment_methods?: VariantPaymentMethod[];
-};
-
-const TABS = ["Thông tin", "Gói", "Biến thể", "Kho"] as const;
-type Tab = (typeof TABS)[number];
+import { TABS, stockStatusVariant } from "./product-detail.constants";
+import { useProductDetail } from "./product-detail.hooks";
 
 export default function AdminProductDetailPage() {
-  const token = useAdminToken();
-  const params = useParams<{ id: string }>();
-  const productId = Number(params.id);
-
-  const [data, setData] = useState<AdminProductDetail | null>(null);
-  const [cats, setCats] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("Thông tin");
-
-  // -- Product fields --
-  const [savingProduct, setSavingProduct] = useState(false);
-  const [productNameEn, setProductNameEn] = useState("");
-  const [productNameVi, setProductNameVi] = useState("");
-  const [productDescEn, setProductDescEn] = useState("");
-  const [productDescVi, setProductDescVi] = useState("");
-  const [productImageUrl, setProductImageUrl] = useState("");
-  const [productCategoryId, setProductCategoryId] = useState<number | "">("");
-
-  // -- Plan fields --
-  const [planSlug, setPlanSlug] = useState("plus");
-  const [planNameEn, setPlanNameEn] = useState("Plus");
-  const [planNameVi, setPlanNameVi] = useState("Gói Plus");
-
-  // -- Variant fields --
-  const [variantPlanId, setVariantPlanId] = useState<number | "">("");
-  const [variantNameEn, setVariantNameEn] = useState("");
-  const [variantNameVi, setVariantNameVi] = useState("");
-  const [variantSku, setVariantSku] = useState("");
-  const [fulfillmentType, setFulfillmentType] = useState<
-    "IN_STOCK" | "PREORDER"
-  >("PREORDER");
-  const [preorderLimit, setPreorderLimit] = useState<number | "">("");
-  const [preorderDeliveryHours, setPreorderDeliveryHours] = useState<
-    number | ""
-  >("");
-  const [warrantyType, setWarrantyType] = useState<"LOGIN" | "CUSTOM" | "NONE">(
-    "NONE",
-  );
-  const [warrantyValue, setWarrantyValue] = useState<number>(24);
-  const [warrantyUnit, setWarrantyUnit] = useState<
-    "HOUR" | "DAY" | "MONTH" | "YEAR"
-  >("HOUR");
-  const [priceUsdt, setPriceUsdt] = useState<number>(0);
-  const [priceVnd, setPriceVnd] = useState<number>(0);
-  const [variantPaymentMethods, setVariantPaymentMethods] = useState<
-    VariantPaymentMethod[]
-  >(["USDT", "BINANCE", "BALANCE"]);
-
-  // -- Edit variant --
-  const [editingVariantId, setEditingVariantId] = useState<number | null>(null);
-  const [editVariant, setEditVariant] = useState<EditableVariant>({});
-  const [editPriceUsdt, setEditPriceUsdt] = useState<number>(0);
-  const [editPriceVnd, setEditPriceVnd] = useState<number>(0);
-
-  // -- Volume tier editor target (per-variant) --
-  const [tierVariantId, setTierVariantId] = useState<number | null>(null);
-
-  // -- Stock --
-  const [stockItems, setStockItems] = useState<AdminStockItem[]>([]);
-  const [stockLoading, setStockLoading] = useState(false);
-  const [stockVariantId, setStockVariantId] = useState<number | "">("");
-  const [stockStatus, setStockStatus] = useState<string>("");
-  const [addStockVariantId, setAddStockVariantId] = useState<number | "">("");
-  const [addStockPayloads, setAddStockPayloads] = useState("");
-  const [addStockNote, setAddStockNote] = useState("");
-  const [addingStock, setAddingStock] = useState(false);
-
-  useEffect(() => {
-    if (!token) return;
-    if (!Number.isInteger(productId) || productId <= 0) return;
-    Promise.all([
-      adminGetProduct(token, productId),
-      adminListCategoriesFlat(token),
-    ])
-      .then(([p, c]) => {
-        setData(p);
-        setCats(c as unknown as Category[]);
-        setProductNameEn(p.name_en);
-        setProductNameVi(p.name_vi);
-        setProductDescEn(p.description_en);
-        setProductDescVi(p.description_vi);
-        setProductImageUrl(p.image_url ?? "");
-        setProductCategoryId(p.category_id);
-        if (p.plans[0]?.id) setVariantPlanId(p.plans[0].id);
-      })
-      .catch((e: unknown) =>
-        setError(
-          e instanceof ApiError ? e.message : "Không tải được sản phẩm.",
-        ),
-      )
-      .finally(() => setLoading(false));
-  }, [token, productId]);
-
-  // -- Product save --
-  const onSaveProduct = async () => {
-    if (!token || !data) return;
-    setSavingProduct(true);
-    setError(null);
-    try {
-      if (productCategoryId === "") throw new Error("Chưa chọn danh mục");
-      await adminUpdateProduct(token, data.id, {
-        name_en: productNameEn,
-        name_vi: productNameVi,
-        description_en: productDescEn,
-        description_vi: productDescVi,
-        image_url: productImageUrl || null,
-        category_id: productCategoryId,
-      });
-      const refreshed = await adminGetProduct(token, data.id);
-      setData(refreshed);
-    } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Cập nhật sản phẩm thất bại.",
-      );
-    } finally {
-      setSavingProduct(false);
-    }
-  };
-
-  const plans = useMemo(() => data?.plans ?? [], [data]);
-  const variants = useMemo(() => data?.variants ?? [], [data]);
-  const inStockVariants = useMemo(
-    () => variants.filter((v) => v.fulfillment_type === "IN_STOCK"),
-    [variants],
-  );
-  const inStockVariantIds = useMemo(
-    () => new Set(inStockVariants.map((v) => v.id)),
-    [inStockVariants],
-  );
-  const stockOnNonInStockVariants = useMemo(
-    () => stockItems.filter((s) => !inStockVariantIds.has(s.variant_id)),
-    [stockItems, inStockVariantIds],
-  );
-  const editingVariantStockCount = useMemo(() => {
-    if (!editingVariantId) return 0;
-    const fromList = variants.find(
-      (v) => v.id === editingVariantId,
-    )?.stock_item_count;
-    return fromList ?? editVariant.stock_item_count ?? 0;
-  }, [editingVariantId, variants, editVariant.stock_item_count]);
-
-  // -- Plan CRUD --
-  const onCreatePlan = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!token || !data) return;
-    setError(null);
-    try {
-      const created = await adminCreatePlan(token, data.id, {
-        slug: planSlug,
-        name_en: planNameEn,
-        name_vi: planNameVi,
-      });
-      setData((prev) =>
-        prev ? { ...prev, plans: [...prev.plans, created] } : prev,
-      );
-      setVariantPlanId(created.id);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Tạo gói thất bại.");
-    }
-  };
-
-  const onSavePlan = async (p: AdminPlan) => {
-    if (!token || !data) return;
-    setError(null);
-    try {
-      const updated = await adminUpdatePlan(token, data.id, p.id, {
-        name_en: p.name_en,
-        name_vi: p.name_vi,
-        sort_order: p.sort_order,
-        is_active: p.is_active,
-      });
-      setData((prev) =>
-        prev
-          ? {
-              ...prev,
-              plans: prev.plans.map((x) => (x.id === updated.id ? updated : x)),
-            }
-          : prev,
-      );
-    } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Cập nhật gói thất bại.",
-      );
-    }
-  };
-
-  const onDeletePlan = async (p: AdminPlan) => {
-    if (!token || !data) return;
-    if (!confirm("Xóa gói? Các biến thể sẽ bị gỡ khỏi gói.")) return;
-    setError(null);
-    try {
-      await adminDeletePlan(token, data.id, p.id);
-      setData((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          plans: prev.plans.filter((x) => x.id !== p.id),
-          variants: prev.variants.map((v) =>
-            v.plan_id === p.id ? { ...v, plan_id: null, plan: null } : v,
-          ),
-        };
-      });
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Xóa gói thất bại.");
-    }
-  };
-
-  // -- Variant CRUD --
-  const onCreateVariant = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!token || !data) return;
-    setError(null);
-    try {
-      if (variantPaymentMethods.length === 0)
-        throw new Error("Chọn ít nhất một phương thức thanh toán.");
-      const created = await adminCreateVariant(token, data.id, {
-        plan_id: variantPlanId === "" ? null : variantPlanId,
-        name_en: variantNameEn,
-        name_vi: variantNameVi,
-        sku: variantSku || null,
-        fulfillment_type: fulfillmentType,
-        preorder_limit:
-          fulfillmentType === "PREORDER"
-            ? preorderLimit === ""
-              ? null
-              : preorderLimit
-            : null,
-        preorder_delivery_hours:
-          fulfillmentType === "PREORDER"
-            ? preorderDeliveryHours === ""
-              ? null
-              : preorderDeliveryHours
-            : null,
-        warranty_type: warrantyType,
-        ...(warrantyType === "CUSTOM"
-          ? { warranty_value: warrantyValue, warranty_unit: warrantyUnit }
-          : {}),
-        prices: buildVariantPricesPayload(priceUsdt, priceVnd),
-        payment_methods: variantPaymentMethods,
-      });
-      setData((prev) =>
-        prev ? { ...prev, variants: [...prev.variants, created] } : prev,
-      );
-      setVariantNameEn("");
-      setVariantNameVi("");
-      setVariantSku("");
-      setFulfillmentType("PREORDER");
-      setPreorderLimit("");
-      setPreorderDeliveryHours("");
-      setPriceUsdt(0);
-      setPriceVnd(0);
-      setWarrantyType("NONE");
-      setVariantPaymentMethods(["USDT", "BINANCE", "BALANCE"]);
-    } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Tạo biến thể thất bại.",
-      );
-    }
-  };
-
-  const startEditVariant = (v: AdminVariant) => {
-    setEditingVariantId(v.id);
-    const methods = (v.payment_methods ?? []).filter(
-      (m): m is VariantPaymentMethod =>
-        PAYMENT_METHOD_OPTIONS.includes(m as VariantPaymentMethod),
-    );
-    setEditVariant({ ...v, payment_methods: methods });
-    const { usdt, vnd } = pricesFromVariantList(v.prices);
-    setEditPriceUsdt(usdt ? Number(usdt) : 0);
-    setEditPriceVnd(vnd ? Number(vnd) : 0);
-  };
-
-  const cancelEditVariant = () => {
-    setEditingVariantId(null);
-    setEditVariant({});
-    setEditPriceUsdt(0);
-    setEditPriceVnd(0);
-  };
-
-  const onSaveVariant = async () => {
-    if (!token || !data || !editingVariantId) return;
-    setError(null);
-    try {
-      const methods = (editVariant.payment_methods ?? []).filter(
-        (m): m is VariantPaymentMethod =>
-          PAYMENT_METHOD_OPTIONS.includes(m as VariantPaymentMethod),
-      );
-      if (methods.length === 0)
-        throw new Error("Chọn ít nhất một phương thức thanh toán.");
-      const updated = await adminUpdateVariant(token, editingVariantId, {
-        plan_id: editVariant.plan_id,
-        name_en: editVariant.name_en,
-        name_vi: editVariant.name_vi,
-        sku: editVariant.sku,
-        fulfillment_type: editVariant.fulfillment_type ?? undefined,
-        preorder_limit:
-          editVariant.fulfillment_type === "PREORDER"
-            ? (editVariant.preorder_limit ?? null)
-            : null,
-        preorder_delivery_hours:
-          editVariant.fulfillment_type === "PREORDER"
-            ? (editVariant.preorder_delivery_hours ?? null)
-            : null,
-        warranty_type: editVariant.warranty_type,
-        warranty_value: editVariant.warranty_value,
-        warranty_unit: editVariant.warranty_unit,
-        prices: buildVariantPricesPayload(editPriceUsdt, editPriceVnd),
-        sort_order: editVariant.sort_order,
-        is_active: editVariant.is_active,
-        payment_methods: methods,
-      });
-      setData((prev) =>
-        prev
-          ? {
-              ...prev,
-              variants: prev.variants.map((x) =>
-                x.id === updated.id ? updated : x,
-              ),
-            }
-          : prev,
-      );
-      cancelEditVariant();
-    } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Cập nhật biến thể thất bại.",
-      );
-    }
-  };
-
-  const onDeleteVariant = async (v: AdminVariant) => {
-    if (!token) return;
-    if (!confirm("Xóa biến thể này?")) return;
-    setError(null);
-    try {
-      await adminDeleteVariant(token, v.id);
-      setData((prev) =>
-        prev
-          ? { ...prev, variants: prev.variants.filter((x) => x.id !== v.id) }
-          : prev,
-      );
-    } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Xóa biến thể thất bại.",
-      );
-    }
-  };
-
-  // -- Stock --
-  const loadStock = async (showLoading = true) => {
-    if (!token) return;
-    if (showLoading) setStockLoading(true);
-    try {
-      const r = await adminListStock(token, {
-        product_id: productId,
-        variant_id: stockVariantId === "" ? undefined : stockVariantId,
-        status: stockStatus || undefined,
-      });
-      setStockItems(r.items);
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Không tải được kho.");
-    } finally {
-      if (showLoading) setStockLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (tab === "Kho" && token) {
-      adminListStock(token, {
-        product_id: productId,
-        variant_id: stockVariantId === "" ? undefined : stockVariantId,
-        status: stockStatus || undefined,
-      })
-        .then((r) => setStockItems(r.items))
-        .catch((e: unknown) =>
-          setError(e instanceof ApiError ? e.message : "Không tải được kho."),
-        );
-    }
-  }, [tab, token, productId, stockVariantId, stockStatus]);
-
-  useEffect(() => {
-    if (tab !== "Kho" || inStockVariants.length === 0) return;
-    if (
-      addStockVariantId === "" ||
-      !inStockVariantIds.has(addStockVariantId as number)
-    ) {
-      queueMicrotask(() => setAddStockVariantId(inStockVariants[0]!.id));
-    }
-  }, [tab, inStockVariants, inStockVariantIds, addStockVariantId]);
-
-  const onAddStock = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!token || addStockVariantId === "") {
-      setError("Chọn biến thể IN_STOCK trước.");
-      return;
-    }
-    if (!inStockVariantIds.has(addStockVariantId as number)) {
-      setError("Chỉ biến thể «Giao từ kho» (IN_STOCK) mới được nhập kho.");
-      return;
-    }
-    setAddingStock(true);
-    setError(null);
-    try {
-      const r = await adminAddStock(token, {
-        variant_id: addStockVariantId as number,
-        payloads: addStockPayloads,
-        note: addStockNote || undefined,
-      });
-      setAddStockPayloads("");
-      await loadStock();
-      setError(`Added ${r.created} stock items.`);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Thêm kho thất bại.");
-    } finally {
-      setAddingStock(false);
-    }
-  };
-
-  const onDeleteStock = async (stockId: number) => {
-    if (!token) return;
-    if (!confirm("Xóa dòng kho này?")) return;
-    setError(null);
-    try {
-      await adminDeleteStock(token, stockId);
-      setStockItems((prev) => prev.filter((s) => s.id !== stockId));
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Xóa kho thất bại.");
-    }
-  };
+  const {
+    token,
+    data,
+    setData,
+    cats,
+    loading,
+    error,
+    tab,
+    setTab,
+    savingProduct,
+    productNameEn,
+    setProductNameEn,
+    productNameVi,
+    setProductNameVi,
+    productDescEn,
+    setProductDescEn,
+    productDescVi,
+    setProductDescVi,
+    productImageUrl,
+    setProductImageUrl,
+    productCategoryId,
+    setProductCategoryId,
+    onSaveProduct,
+    planSlug,
+    setPlanSlug,
+    planNameEn,
+    setPlanNameEn,
+    planNameVi,
+    setPlanNameVi,
+    onCreatePlan,
+    onSavePlan,
+    onDeletePlan,
+    variantPlanId,
+    setVariantPlanId,
+    variantNameEn,
+    setVariantNameEn,
+    variantNameVi,
+    setVariantNameVi,
+    variantSku,
+    setVariantSku,
+    fulfillmentType,
+    setFulfillmentType,
+    preorderLimit,
+    setPreorderLimit,
+    preorderDeliveryHours,
+    setPreorderDeliveryHours,
+    warrantyType,
+    setWarrantyType,
+    warrantyValue,
+    setWarrantyValue,
+    warrantyUnit,
+    setWarrantyUnit,
+    priceUsdt,
+    setPriceUsdt,
+    priceVnd,
+    setPriceVnd,
+    variantPaymentMethods,
+    setVariantPaymentMethods,
+    onCreateVariant,
+    editingVariantId,
+    editVariant,
+    setEditVariant,
+    editPriceUsdt,
+    setEditPriceUsdt,
+    editPriceVnd,
+    setEditPriceVnd,
+    startEditVariant,
+    cancelEditVariant,
+    onSaveVariant,
+    onDeleteVariant,
+    editingVariantStockCount,
+    tierVariantId,
+    setTierVariantId,
+    stockItems,
+    stockLoading,
+    stockVariantId,
+    setStockVariantId,
+    stockStatus,
+    setStockStatus,
+    addStockVariantId,
+    setAddStockVariantId,
+    addStockPayloads,
+    setAddStockPayloads,
+    addStockNote,
+    setAddStockNote,
+    addingStock,
+    loadStock,
+    onAddStock,
+    onDeleteStock,
+    plans,
+    variants,
+    inStockVariants,
+    stockOnNonInStockVariants,
+  } = useProductDetail();
 
   if (loading) return <Card className="animate-pulse">Đang tải sản phẩm…</Card>;
   if (!data) return <Card>Không có dữ liệu.</Card>;
@@ -503,47 +131,40 @@ export default function AdminProductDetailPage() {
       <div className="flex flex-wrap items-center gap-2">
         <Link
           href="/admin/products"
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="text-xs text-gray-600 hover:text-brutal-fg transition-colors"
         >
           Về sản phẩm
         </Link>
-        <span className="text-xs text-muted-foreground">/</span>
-        <span className="text-xs font-semibold text-foreground">
+        <span className="text-xs text-gray-600">/</span>
+        <span className="text-xs font-semibold text-brutal-fg">
           #{data.id} {data.name_en}
-          <span className="font-normal text-muted-foreground">
-            {" "}
-            / {data.name_vi}
-          </span>
+          <span className="font-normal text-gray-600"> / {data.name_vi}</span>
         </span>
       </div>
 
-      {error ? (
-        <Alert tone="error" onDismiss={() => setError(null)}>
-          {error}
-        </Alert>
-      ) : null}
+      {error ? <Alert variant="danger">{error}</Alert> : null}
 
-      <div className="flex w-fit gap-0.5 rounded-lg bg-muted p-0.5">
+      <div className="flex w-fit gap-0.5 rounded-brutal bg-brutal-muted p-0.5">
         {TABS.map((t) => (
           <Button
             key={t}
             type="button"
-            uiSize="sm"
+            size="sm"
             variant={tab === t ? "primary" : "ghost"}
             onClick={() => setTab(t)}
             className={cn(
               "cursor-pointer rounded-md px-3 py-1.5 text-xs font-semibold transition-colors duration-150",
-              tab !== t && "text-muted-foreground hover:text-foreground",
+              tab !== t && "text-gray-600 hover:text-brutal-fg",
             )}
           >
             {t}
             {t === "Biến thể" && (
-              <span className="ml-1 text-[10px] text-muted-foreground">
+              <span className="ml-1 text-[10px] text-gray-600">
                 ({variants.length})
               </span>
             )}
             {t === "Gói" && (
-              <span className="ml-1 text-[10px] text-muted-foreground">
+              <span className="ml-1 text-[10px] text-gray-600">
                 ({plans.length})
               </span>
             )}
@@ -559,7 +180,7 @@ export default function AdminProductDetailPage() {
               <label className="grid gap-0.5">
                 <Label>Tên (EN)</Label>
                 <Input
-                  uiSize="sm"
+                  size="sm"
                   value={productNameEn}
                   onChange={(e) => setProductNameEn(e.target.value)}
                 />
@@ -567,7 +188,7 @@ export default function AdminProductDetailPage() {
               <label className="grid gap-0.5">
                 <Label>Tên (VI)</Label>
                 <Input
-                  uiSize="sm"
+                  size="sm"
                   value={productNameVi}
                   onChange={(e) => setProductNameVi(e.target.value)}
                 />
@@ -593,7 +214,7 @@ export default function AdminProductDetailPage() {
               <label className="grid gap-0.5">
                 <Label>URL ảnh</Label>
                 <Input
-                  uiSize="sm"
+                  size="sm"
                   value={productImageUrl}
                   onChange={(e) => setProductImageUrl(e.target.value)}
                 />
@@ -601,26 +222,33 @@ export default function AdminProductDetailPage() {
               <label className="grid gap-0.5">
                 <Label>Danh mục</Label>
                 <Select
-                  uiSize="sm"
-                  value={productCategoryId}
-                  onChange={(e) =>
-                    setProductCategoryId(
-                      e.target.value === "" ? "" : Number(e.target.value),
-                    )
+                  value={
+                    productCategoryId === ""
+                      ? "__none"
+                      : String(productCategoryId)
+                  }
+                  onValueChange={(value) =>
+                    setProductCategoryId(value === "__none" ? "" : Number(value))
                   }
                 >
-                  <option value="">Chọn…</option>
-                  {cats.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.id} — {c.name}
-                    </option>
-                  ))}
+                  <SelectTrigger className="h-9 px-3 py-1 text-sm">
+                    <SelectValue placeholder="Chọn…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">Chọn…</SelectItem>
+                    {cats.map((c) => (
+                      <SelectItem key={c.id} value={String(c.id)}>
+                        {c.id} — {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </label>
             </div>
             <div className="flex justify-end">
               <Button
-                uiSize="sm"
+                variant="primary"
+                size="sm"
                 disabled={savingProduct}
                 onClick={onSaveProduct}
               >
@@ -642,7 +270,7 @@ export default function AdminProductDetailPage() {
               <label className="grid gap-0.5">
                 <Label>Mã gói (slug)</Label>
                 <Input
-                  uiSize="sm"
+                  size="sm"
                   className="w-28"
                   value={planSlug}
                   onChange={(e) => setPlanSlug(e.target.value)}
@@ -651,7 +279,7 @@ export default function AdminProductDetailPage() {
               <label className="grid gap-0.5">
                 <Label>Tên (EN)</Label>
                 <Input
-                  uiSize="sm"
+                  size="sm"
                   className="w-28"
                   value={planNameEn}
                   onChange={(e) => setPlanNameEn(e.target.value)}
@@ -660,35 +288,33 @@ export default function AdminProductDetailPage() {
               <label className="grid gap-0.5">
                 <Label>Tên (VI)</Label>
                 <Input
-                  uiSize="sm"
+                  size="sm"
                   className="w-28"
                   value={planNameVi}
                   onChange={(e) => setPlanNameVi(e.target.value)}
                 />
               </label>
-              <Button type="submit" uiSize="sm">
+              <Button type="submit" variant="primary" size="sm">
                 + Gói
               </Button>
             </form>
           </Card>
 
           {plans.length === 0 ? (
-            <div className="text-xs text-muted-foreground px-1">
-              Chưa có gói.
-            </div>
+            <div className="text-xs text-gray-600 px-1">Chưa có gói.</div>
           ) : (
             <div className="grid gap-1">
               {plans.map((p) => (
                 <div
                   key={p.id}
-                  className="rounded-lg border border-border bg-surface px-3 py-2"
+                  className="rounded-brutal border-3 border-brutal bg-brutal-bg px-3 py-2"
                 >
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="w-16 shrink-0 text-xs font-semibold text-foreground">
+                    <span className="w-16 shrink-0 text-xs font-semibold text-brutal-fg">
                       {p.slug}
                     </span>
                     <Input
-                      uiSize="sm"
+                      size="sm"
                       className="w-24"
                       value={p.name_en}
                       onChange={(e) =>
@@ -712,7 +338,7 @@ export default function AdminProductDetailPage() {
                       placeholder="EN"
                     />
                     <Input
-                      uiSize="sm"
+                      size="sm"
                       className="w-24"
                       value={p.name_vi}
                       onChange={(e) =>
@@ -731,10 +357,10 @@ export default function AdminProductDetailPage() {
                       }
                       placeholder="VI"
                     />
-                    <label className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground">
+                    <label className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600">
                       Thứ tự
                       <Input
-                        uiSize="sm"
+                        size="sm"
                         type="number"
                         className="w-14"
                         value={p.sort_order}
@@ -757,23 +383,18 @@ export default function AdminProductDetailPage() {
                         }
                       />
                     </label>
-                    <label className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground">
+                    <label className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600">
                       Hiển thị
                       <Select
-                        uiSize="sm"
-                        className="w-24"
                         value={String(p.is_active)}
-                        onChange={(e) =>
+                        onValueChange={(value) =>
                           setData((prev) =>
                             prev
                               ? {
                                   ...prev,
                                   plans: prev.plans.map((x) =>
                                     x.id === p.id
-                                      ? {
-                                          ...x,
-                                          is_active: e.target.value === "true",
-                                        }
+                                      ? { ...x, is_active: value === "true" }
                                       : x,
                                   ),
                                 }
@@ -781,22 +402,27 @@ export default function AdminProductDetailPage() {
                           )
                         }
                       >
-                        <option value="true">Có</option>
-                        <option value="false">Không</option>
+                        <SelectTrigger className="h-9 w-24 px-3 py-1 text-sm">
+                          <SelectValue placeholder="Hiển thị" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="true">Có</SelectItem>
+                          <SelectItem value="false">Không</SelectItem>
+                        </SelectContent>
                       </Select>
                     </label>
                     <div className="ml-auto flex gap-1">
                       <Button
-                        variant="ghost"
-                        uiSize="sm"
+                        variant="primary"
+                        size="sm"
                         type="button"
                         onClick={() => onSavePlan(p)}
                       >
                         Lưu
                       </Button>
                       <Button
-                        variant="ghost"
-                        uiSize="sm"
+                        variant="danger"
+                        size="sm"
                         type="button"
                         onClick={() => onDeletePlan(p)}
                       >
@@ -821,26 +447,28 @@ export default function AdminProductDetailPage() {
                 <label className="grid gap-0.5">
                   <Label>Gói</Label>
                   <Select
-                    uiSize="sm"
-                    value={variantPlanId}
-                    onChange={(e) =>
-                      setVariantPlanId(
-                        e.target.value === "" ? "" : Number(e.target.value),
-                      )
+                    value={variantPlanId === "" ? "__none" : String(variantPlanId)}
+                    onValueChange={(value) =>
+                      setVariantPlanId(value === "__none" ? "" : Number(value))
                     }
                   >
-                    <option value="">(không có)</option>
-                    {plans.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.slug}
-                      </option>
-                    ))}
+                    <SelectTrigger className="h-9 px-3 py-1 text-sm">
+                      <SelectValue placeholder="(không có)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none">(không có)</SelectItem>
+                      {plans.map((p) => (
+                        <SelectItem key={p.id} value={String(p.id)}>
+                          {p.slug}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </label>
                 <label className="grid gap-0.5">
                   <Label>Tên (EN)</Label>
                   <Input
-                    uiSize="sm"
+                    size="sm"
                     value={variantNameEn}
                     onChange={(e) => setVariantNameEn(e.target.value)}
                   />
@@ -848,7 +476,7 @@ export default function AdminProductDetailPage() {
                 <label className="grid gap-0.5">
                   <Label>Tên (VI)</Label>
                   <Input
-                    uiSize="sm"
+                    size="sm"
                     value={variantNameVi}
                     onChange={(e) => setVariantNameVi(e.target.value)}
                   />
@@ -856,7 +484,7 @@ export default function AdminProductDetailPage() {
                 <label className="grid gap-0.5">
                   <Label>SKU</Label>
                   <Input
-                    uiSize="sm"
+                    size="sm"
                     value={variantSku}
                     onChange={(e) => setVariantSku(e.target.value)}
                     placeholder="CHATGPT-PLUS-1M"
@@ -865,16 +493,22 @@ export default function AdminProductDetailPage() {
                 <label className="grid gap-0.5">
                   <Label>Cách giao</Label>
                   <Select
-                    uiSize="sm"
                     value={fulfillmentType}
-                    onChange={(e) =>
-                      setFulfillmentType(
-                        e.target.value as "IN_STOCK" | "PREORDER",
-                      )
+                    onValueChange={(value) =>
+                      setFulfillmentType(value as "IN_STOCK" | "PREORDER")
                     }
                   >
-                    <option value="IN_STOCK">Giao từ kho (IN_STOCK)</option>
-                    <option value="PREORDER">Đặt trước (PREORDER)</option>
+                    <SelectTrigger className="h-9 px-3 py-1 text-sm">
+                      <SelectValue placeholder="Cách giao" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="IN_STOCK">
+                        Giao từ kho (IN_STOCK)
+                      </SelectItem>
+                      <SelectItem value="PREORDER">
+                        Đặt trước (PREORDER)
+                      </SelectItem>
+                    </SelectContent>
                   </Select>
                 </label>
               </div>
@@ -884,7 +518,7 @@ export default function AdminProductDetailPage() {
                     <label className="grid gap-0.5">
                       <Label>Giới hạn pre-order</Label>
                       <Input
-                        uiSize="sm"
+                        size="sm"
                         type="number"
                         min={1}
                         value={preorderLimit}
@@ -899,7 +533,7 @@ export default function AdminProductDetailPage() {
                     <label className="grid gap-0.5">
                       <Label>Giờ giao (PREORDER)</Label>
                       <Input
-                        uiSize="sm"
+                        size="sm"
                         type="number"
                         min={1}
                         value={preorderDeliveryHours}
@@ -916,17 +550,19 @@ export default function AdminProductDetailPage() {
                 <label className="grid gap-0.5">
                   <Label>Bảo hành</Label>
                   <Select
-                    uiSize="sm"
                     value={warrantyType}
-                    onChange={(e) =>
-                      setWarrantyType(
-                        e.target.value as "LOGIN" | "CUSTOM" | "NONE",
-                      )
+                    onValueChange={(value) =>
+                      setWarrantyType(value as "LOGIN" | "CUSTOM" | "NONE")
                     }
                   >
-                    <option value="NONE">NONE</option>
-                    <option value="LOGIN">LOGIN</option>
-                    <option value="CUSTOM">CUSTOM</option>
+                    <SelectTrigger className="h-9 px-3 py-1 text-sm">
+                      <SelectValue placeholder="Bảo hành" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="NONE">NONE</SelectItem>
+                      <SelectItem value="LOGIN">LOGIN</SelectItem>
+                      <SelectItem value="CUSTOM">CUSTOM</SelectItem>
+                    </SelectContent>
                   </Select>
                 </label>
                 {warrantyType === "CUSTOM" && (
@@ -934,30 +570,32 @@ export default function AdminProductDetailPage() {
                     <label className="grid gap-0.5">
                       <Label>Giá trị BH</Label>
                       <Input
-                        uiSize="sm"
+                        size="sm"
                         type="number"
                         min={1}
                         value={warrantyValue}
-                        onChange={(e) =>
-                          setWarrantyValue(Number(e.target.value))
-                        }
+                        onChange={(e) => setWarrantyValue(Number(e.target.value))}
                       />
                     </label>
                     <label className="grid gap-0.5">
                       <Label>Đơn vị BH</Label>
                       <Select
-                        uiSize="sm"
                         value={warrantyUnit}
-                        onChange={(e) =>
+                        onValueChange={(value) =>
                           setWarrantyUnit(
-                            e.target.value as "HOUR" | "DAY" | "MONTH" | "YEAR",
+                            value as "HOUR" | "DAY" | "MONTH" | "YEAR",
                           )
                         }
                       >
-                        <option value="HOUR">HOUR</option>
-                        <option value="DAY">DAY</option>
-                        <option value="MONTH">MONTH</option>
-                        <option value="YEAR">YEAR</option>
+                        <SelectTrigger className="h-9 px-3 py-1 text-sm">
+                          <SelectValue placeholder="Đơn vị" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="HOUR">HOUR</SelectItem>
+                          <SelectItem value="DAY">DAY</SelectItem>
+                          <SelectItem value="MONTH">MONTH</SelectItem>
+                          <SelectItem value="YEAR">YEAR</SelectItem>
+                        </SelectContent>
                       </Select>
                     </label>
                   </>
@@ -965,7 +603,7 @@ export default function AdminProductDetailPage() {
                 <label className="grid gap-0.5">
                   <Label>Giá USDT</Label>
                   <Input
-                    uiSize="sm"
+                    size="sm"
                     type="number"
                     min={0}
                     step="0.01"
@@ -976,7 +614,7 @@ export default function AdminProductDetailPage() {
                 <label className="grid gap-0.5">
                   <Label>Giá VND</Label>
                   <Input
-                    uiSize="sm"
+                    size="sm"
                     type="number"
                     min={0}
                     step={1}
@@ -990,7 +628,7 @@ export default function AdminProductDetailPage() {
                 onChange={setVariantPaymentMethods}
               />
               <div className="flex justify-end">
-                <Button type="submit" uiSize="sm">
+                <Button type="submit" variant="primary" size="sm">
                   + Biến thể
                 </Button>
               </div>
@@ -998,9 +636,9 @@ export default function AdminProductDetailPage() {
           </Card>
 
           {/* Variants Table */}
-          <TableWrap>
+          <>
             <Table>
-              <thead className="bg-muted text-muted-foreground">
+              <thead className="bg-brutal-muted text-gray-600">
                 <tr>
                   <th className="text-left px-3 py-1.5 font-semibold">ID</th>
                   <th className="text-left px-3 py-1.5 font-semibold">Gói</th>
@@ -1023,37 +661,37 @@ export default function AdminProductDetailPage() {
                 {variants.map((v) => (
                   <tr
                     key={v.id}
-                    className="border-t border-border-subtle hover:bg-muted/50"
+                    className="border-t-3 border-brutal hover:bg-brutal-muted"
                   >
-                    <td className="px-3 py-1.5 font-mono text-[10px] text-muted-foreground">
+                    <td className="px-3 py-1.5 font-mono text-[10px] text-gray-600">
                       {v.id}
                     </td>
-                    <td className="px-3 py-1.5 font-semibold text-foreground">
+                    <td className="px-3 py-1.5 font-semibold text-brutal-fg">
                       {v.plan?.slug ?? "—"}
                     </td>
-                    <td className="px-3 py-1.5 text-foreground">
+                    <td className="px-3 py-1.5 text-brutal-fg">
                       <span className="block text-xs font-semibold">
                         {v.name_en}
                       </span>
-                      <span className="block text-[10px] text-muted-foreground">
+                      <span className="block text-[10px] text-gray-600">
                         {v.name_vi}
                       </span>
                     </td>
-                    <td className="px-3 py-1.5 font-mono text-[10px] text-muted-foreground">
+                    <td className="px-3 py-1.5 font-mono text-[10px] text-gray-600">
                       {v.sku ?? "—"}
                     </td>
                     <td className="px-3 py-1.5">
                       <Badge
-                        tone={
+                        variant={
                           v.fulfillment_type === "IN_STOCK"
                             ? "success"
-                            : "warning"
+                            : "accent"
                         }
                       >
                         {v.fulfillment_type ?? "—"}
                       </Badge>
                       {v.fulfillment_type === "PREORDER" ? (
-                        <div className="mt-0.5 text-[10px] text-muted-foreground">
+                        <div className="mt-0.5 text-[10px] text-gray-600">
                           {v.preorder_delivery_hours
                             ? `${v.preorder_delivery_hours}h`
                             : "chưa rõ SLA"}{" "}
@@ -1061,41 +699,41 @@ export default function AdminProductDetailPage() {
                         </div>
                       ) : null}
                     </td>
-                    <td className="px-3 py-1.5 text-foreground">
+                    <td className="px-3 py-1.5 text-brutal-fg">
                       {v.warranty_type}
                       {v.warranty_type === "CUSTOM" &&
                       typeof v.warranty_value === "number"
                         ? ` (${v.warranty_value}${v.warranty_unit ?? ""})`
                         : ""}
                     </td>
-                    <td className="px-3 py-1.5 text-foreground">
+                    <td className="px-3 py-1.5 text-brutal-fg">
                       {(() => {
                         const { usdt, vnd } = pricesFromVariantList(v.prices);
                         return (
                           <div className="grid gap-0.5 text-xs">
                             <span>{formatUsdt(usdt)}</span>
-                            <span className="text-muted-foreground">
+                            <span className="text-gray-600">
                               {formatVnd(vnd)}
                             </span>
                           </div>
                         );
                       })()}
                     </td>
-                    <td className="px-3 py-1.5 text-muted-foreground text-[10px]">
+                    <td className="px-3 py-1.5 text-gray-600 text-[10px]">
                       {(v.payment_methods ?? []).join(", ") || "—"}
                     </td>
                     <td className="px-3 py-1.5 text-right">
                       <div className="inline-flex gap-1">
                         <Button
                           variant="ghost"
-                          uiSize="sm"
+                          size="sm"
                           onClick={() => startEditVariant(v)}
                         >
                           Sửa
                         </Button>
                         <Button
                           variant="ghost"
-                          uiSize="sm"
+                          size="sm"
                           onClick={() =>
                             setTierVariantId(
                               tierVariantId === v.id ? null : v.id,
@@ -1109,8 +747,8 @@ export default function AdminProductDetailPage() {
                             : ""}
                         </Button>
                         <Button
-                          variant="ghost"
-                          uiSize="sm"
+                          variant="danger"
+                          size="sm"
                           onClick={() => onDeleteVariant(v)}
                         >
                           Xóa
@@ -1121,14 +759,14 @@ export default function AdminProductDetailPage() {
                 ))}
                 {variants.length === 0 && (
                   <tr>
-                    <td className="px-3 py-3 text-muted-foreground" colSpan={9}>
+                    <td className="px-3 py-3 text-gray-600" colSpan={9}>
                       Chưa có biến thể.
                     </td>
                   </tr>
                 )}
               </tbody>
             </Table>
-          </TableWrap>
+          </>
 
           {/* Volume tiers editor */}
           {tierVariantId &&
@@ -1162,20 +800,16 @@ export default function AdminProductDetailPage() {
 
           {/* Edit Variant Modal-like Section */}
           {editingVariantId && (
-            <Card className="border-border bg-accent-muted/40">
+            <Card className="border-brutal bg-brutal-muted">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-foreground">
+                <span className="text-xs font-semibold text-brutal-fg">
                   Sửa biến thể #{editingVariantId}
                 </span>
                 <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    uiSize="sm"
-                    onClick={cancelEditVariant}
-                  >
+                  <Button variant="ghost" size="sm" onClick={cancelEditVariant}>
                     Hủy
                   </Button>
-                  <Button uiSize="sm" onClick={onSaveVariant}>
+                  <Button variant="primary" size="sm" onClick={onSaveVariant}>
                     Lưu
                   </Button>
                 </div>
@@ -1184,28 +818,35 @@ export default function AdminProductDetailPage() {
                 <label className="grid gap-0.5">
                   <Label>Gói</Label>
                   <Select
-                    uiSize="sm"
-                    value={editVariant.plan_id ?? ""}
-                    onChange={(e) =>
+                    value={
+                      editVariant.plan_id == null
+                        ? "__none"
+                        : String(editVariant.plan_id)
+                    }
+                    onValueChange={(value) =>
                       setEditVariant((p) => ({
                         ...p,
-                        plan_id:
-                          e.target.value === "" ? null : Number(e.target.value),
+                        plan_id: value === "__none" ? null : Number(value),
                       }))
                     }
                   >
-                    <option value="">(không có)</option>
-                    {plans.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.slug}
-                      </option>
-                    ))}
+                    <SelectTrigger className="h-9 px-3 py-1 text-sm">
+                      <SelectValue placeholder="(không có)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none">(không có)</SelectItem>
+                      {plans.map((p) => (
+                        <SelectItem key={p.id} value={String(p.id)}>
+                          {p.slug}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </label>
                 <label className="grid gap-0.5">
                   <Label>Tên (EN)</Label>
                   <Input
-                    uiSize="sm"
+                    size="sm"
                     value={editVariant.name_en ?? ""}
                     onChange={(e) =>
                       setEditVariant((p) => ({
@@ -1219,7 +860,7 @@ export default function AdminProductDetailPage() {
                 <label className="grid gap-0.5">
                   <Label>Tên (VI)</Label>
                   <Input
-                    uiSize="sm"
+                    size="sm"
                     value={editVariant.name_vi ?? ""}
                     onChange={(e) =>
                       setEditVariant((p) => ({ ...p, name_vi: e.target.value }))
@@ -1229,7 +870,7 @@ export default function AdminProductDetailPage() {
                 <label className="grid gap-0.5">
                   <Label>SKU</Label>
                   <Input
-                    uiSize="sm"
+                    size="sm"
                     value={editVariant.sku ?? ""}
                     onChange={(e) =>
                       setEditVariant((p) => ({ ...p, sku: e.target.value }))
@@ -1241,38 +882,39 @@ export default function AdminProductDetailPage() {
                 <label className="grid gap-0.5">
                   <Label>Cách giao</Label>
                   <Select
-                    uiSize="sm"
                     value={editVariant.fulfillment_type ?? "PREORDER"}
-                    onChange={(e) =>
+                    onValueChange={(value) =>
                       setEditVariant((p) => ({
                         ...p,
-                        fulfillment_type: e.target.value as
-                          | "IN_STOCK"
-                          | "PREORDER",
+                        fulfillment_type: value as "IN_STOCK" | "PREORDER",
                         preorder_limit:
-                          e.target.value === "PREORDER"
-                            ? (p.preorder_limit ?? null)
-                            : null,
+                          value === "PREORDER" ? (p.preorder_limit ?? null) : null,
                         preorder_delivery_hours:
-                          e.target.value === "PREORDER"
+                          value === "PREORDER"
                             ? (p.preorder_delivery_hours ?? null)
                             : null,
                       }))
                     }
                   >
-                    <option value="IN_STOCK">Giao từ kho (IN_STOCK)</option>
-                    <option
-                      value="PREORDER"
-                      disabled={editingVariantStockCount > 0}
-                    >
-                      Đặt trước (PREORDER)
-                    </option>
+                    <SelectTrigger className="h-9 px-3 py-1 text-sm">
+                      <SelectValue placeholder="Cách giao" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="IN_STOCK">
+                        Giao từ kho (IN_STOCK)
+                      </SelectItem>
+                      <SelectItem
+                        value="PREORDER"
+                        disabled={editingVariantStockCount > 0}
+                      >
+                        Đặt trước (PREORDER)
+                      </SelectItem>
+                    </SelectContent>
                   </Select>
                   {editingVariantStockCount > 0 ? (
-                    <p className="text-[10px] text-muted-foreground">
-                      Biến thể đang có {editingVariantStockCount} dòng kho —
-                      không thể chuyển sang PREORDER. Xóa hết kho (tab Kho)
-                      trước.
+                    <p className="text-[10px] text-gray-600">
+                      Biến thể đang có {editingVariantStockCount} dòng kho — không
+                      thể chuyển sang PREORDER. Xóa hết kho (tab Kho) trước.
                     </p>
                   ) : null}
                 </label>
@@ -1281,7 +923,7 @@ export default function AdminProductDetailPage() {
                     <label className="grid gap-0.5">
                       <Label>Giới hạn pre-order</Label>
                       <Input
-                        uiSize="sm"
+                        size="sm"
                         type="number"
                         min={1}
                         value={editVariant.preorder_limit ?? ""}
@@ -1299,7 +941,7 @@ export default function AdminProductDetailPage() {
                     <label className="grid gap-0.5">
                       <Label>Giờ giao (PREORDER)</Label>
                       <Input
-                        uiSize="sm"
+                        size="sm"
                         type="number"
                         min={1}
                         value={editVariant.preorder_delivery_hours ?? ""}
@@ -1319,7 +961,7 @@ export default function AdminProductDetailPage() {
                 <label className="grid gap-0.5">
                   <Label>Thứ tự</Label>
                   <Input
-                    uiSize="sm"
+                    size="sm"
                     type="number"
                     value={editVariant.sort_order ?? 0}
                     onChange={(e) =>
@@ -1333,21 +975,22 @@ export default function AdminProductDetailPage() {
                 <label className="grid gap-0.5">
                   <Label>Bảo hành</Label>
                   <Select
-                    uiSize="sm"
                     value={editVariant.warranty_type ?? "NONE"}
-                    onChange={(e) =>
+                    onValueChange={(value) =>
                       setEditVariant((p) => ({
                         ...p,
-                        warranty_type: e.target.value as
-                          | "LOGIN"
-                          | "CUSTOM"
-                          | "NONE",
+                        warranty_type: value as "LOGIN" | "CUSTOM" | "NONE",
                       }))
                     }
                   >
-                    <option value="NONE">NONE</option>
-                    <option value="LOGIN">LOGIN</option>
-                    <option value="CUSTOM">CUSTOM</option>
+                    <SelectTrigger className="h-9 px-3 py-1 text-sm">
+                      <SelectValue placeholder="Bảo hành" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="NONE">NONE</SelectItem>
+                      <SelectItem value="LOGIN">LOGIN</SelectItem>
+                      <SelectItem value="CUSTOM">CUSTOM</SelectItem>
+                    </SelectContent>
                   </Select>
                 </label>
                 {editVariant.warranty_type === "CUSTOM" && (
@@ -1355,7 +998,7 @@ export default function AdminProductDetailPage() {
                     <label className="grid gap-0.5">
                       <Label>Giá trị BH</Label>
                       <Input
-                        uiSize="sm"
+                        size="sm"
                         type="number"
                         min={1}
                         value={editVariant.warranty_value ?? 24}
@@ -1370,12 +1013,11 @@ export default function AdminProductDetailPage() {
                     <label className="grid gap-0.5">
                       <Label>Đơn vị BH</Label>
                       <Select
-                        uiSize="sm"
                         value={editVariant.warranty_unit ?? "HOUR"}
-                        onChange={(e) =>
+                        onValueChange={(value) =>
                           setEditVariant((p) => ({
                             ...p,
-                            warranty_unit: e.target.value as
+                            warranty_unit: value as
                               | "HOUR"
                               | "DAY"
                               | "MONTH"
@@ -1383,10 +1025,15 @@ export default function AdminProductDetailPage() {
                           }))
                         }
                       >
-                        <option value="HOUR">HOUR</option>
-                        <option value="DAY">DAY</option>
-                        <option value="MONTH">MONTH</option>
-                        <option value="YEAR">YEAR</option>
+                        <SelectTrigger className="h-9 px-3 py-1 text-sm">
+                          <SelectValue placeholder="Đơn vị" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="HOUR">HOUR</SelectItem>
+                          <SelectItem value="DAY">DAY</SelectItem>
+                          <SelectItem value="MONTH">MONTH</SelectItem>
+                          <SelectItem value="YEAR">YEAR</SelectItem>
+                        </SelectContent>
                       </Select>
                     </label>
                   </>
@@ -1394,17 +1041,21 @@ export default function AdminProductDetailPage() {
                 <label className="grid gap-0.5">
                   <Label>Đang bán</Label>
                   <Select
-                    uiSize="sm"
                     value={String(editVariant.is_active ?? true)}
-                    onChange={(e) =>
+                    onValueChange={(value) =>
                       setEditVariant((p) => ({
                         ...p,
-                        is_active: e.target.value === "true",
+                        is_active: value === "true",
                       }))
                     }
                   >
-                    <option value="true">có</option>
-                    <option value="false">không</option>
+                    <SelectTrigger className="h-9 px-3 py-1 text-sm">
+                      <SelectValue placeholder="Đang bán" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="true">có</SelectItem>
+                      <SelectItem value="false">không</SelectItem>
+                    </SelectContent>
                   </Select>
                 </label>
               </div>
@@ -1420,7 +1071,7 @@ export default function AdminProductDetailPage() {
                 <label className="grid gap-0.5">
                   <Label>Giá USDT</Label>
                   <Input
-                    uiSize="sm"
+                    size="sm"
                     type="number"
                     min={0}
                     step="0.01"
@@ -1431,7 +1082,7 @@ export default function AdminProductDetailPage() {
                 <label className="grid gap-0.5">
                   <Label>Giá VND</Label>
                   <Input
-                    uiSize="sm"
+                    size="sm"
                     type="number"
                     min={0}
                     step={1}
@@ -1452,14 +1103,14 @@ export default function AdminProductDetailPage() {
           <Card>
             <form onSubmit={onAddStock} className="grid gap-2">
               {inStockVariants.length === 0 ? (
-                <Alert tone="warning">
+                <Alert variant="warning">
                   Chưa có biến thể «Giao từ kho» (IN_STOCK). Tạo hoặc sửa biến
                   thể ở tab Biến thể, chọn cách giao IN_STOCK, rồi quay lại nhập
                   kho.
                 </Alert>
               ) : null}
               {stockOnNonInStockVariants.length > 0 ? (
-                <Alert tone="warning">
+                <Alert variant="warning">
                   Có {stockOnNonInStockVariants.length} dòng kho thuộc biến thể
                   không còn IN_STOCK. Biến thể đã có kho không được đổi sang
                   PREORDER — xóa kho (tab này) hoặc giữ IN_STOCK.
@@ -1469,27 +1120,35 @@ export default function AdminProductDetailPage() {
                 <label className="grid gap-0.5">
                   <Label>Biến thể (Giao từ kho)</Label>
                   <Select
-                    uiSize="sm"
-                    value={addStockVariantId}
+                    value={
+                      addStockVariantId === ""
+                        ? "__none"
+                        : String(addStockVariantId)
+                    }
                     disabled={inStockVariants.length === 0}
-                    onChange={(e) =>
+                    onValueChange={(value) =>
                       setAddStockVariantId(
-                        e.target.value === "" ? "" : Number(e.target.value),
+                        value === "__none" ? "" : Number(value),
                       )
                     }
                   >
-                    <option value="">Chọn…</option>
-                    {inStockVariants.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.id} — {v.name_en}
-                      </option>
-                    ))}
+                    <SelectTrigger className="h-9 px-3 py-1 text-sm">
+                      <SelectValue placeholder="Chọn…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none">Chọn…</SelectItem>
+                      {inStockVariants.map((v) => (
+                        <SelectItem key={v.id} value={String(v.id)}>
+                          {v.id} — {v.name_en}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </label>
                 <label className="grid gap-0.5">
                   <Label>Ghi chú (tuỳ chọn)</Label>
                   <Input
-                    uiSize="sm"
+                    size="sm"
                     value={addStockNote}
                     onChange={(e) => setAddStockNote(e.target.value)}
                     placeholder="đợt, nguồn…"
@@ -1498,7 +1157,8 @@ export default function AdminProductDetailPage() {
                 <div className="flex items-end">
                   <Button
                     type="submit"
-                    uiSize="sm"
+                    variant="primary"
+                    size="sm"
                     disabled={
                       addingStock ||
                       inStockVariants.length === 0 ||
@@ -1524,51 +1184,55 @@ export default function AdminProductDetailPage() {
           </Card>
 
           {/* Stock filters + table */}
-          <TableWrap>
-            <TableHeader>
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-brutal border-3 border-brutal bg-brutal-bg p-3 shadow-brutal-sm">
               <div className="flex items-center gap-2 flex-wrap">
                 <Select
-                  uiSize="sm"
-                  className="w-32"
-                  value={stockVariantId}
-                  onChange={(e) => {
-                    setStockVariantId(
-                      e.target.value === "" ? "" : Number(e.target.value),
-                    );
+                  value={
+                    stockVariantId === "" ? "__all" : String(stockVariantId)
+                  }
+                  onValueChange={(value) => {
+                    setStockVariantId(value === "__all" ? "" : Number(value));
                   }}
                 >
-                  <option value="">Mọi biến thể IN_STOCK</option>
-                  {inStockVariants.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.id} — {v.name_en}
-                    </option>
-                  ))}
+                  <SelectTrigger className="h-9 w-32 px-3 py-1 text-sm">
+                    <SelectValue placeholder="Mọi biến thể IN_STOCK" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all">Mọi biến thể IN_STOCK</SelectItem>
+                    {inStockVariants.map((v) => (
+                      <SelectItem key={v.id} value={String(v.id)}>
+                        {v.id} — {v.name_en}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
                 <Select
-                  uiSize="sm"
-                  className="w-28"
-                  value={stockStatus}
-                  onChange={(e) => setStockStatus(e.target.value)}
+                  value={stockStatus || "__all"}
+                  onValueChange={(value) =>
+                    setStockStatus(value === "__all" ? "" : value)
+                  }
                 >
-                  <option value="">(mọi trạng thái)</option>
-                  <option value="AVAILABLE">AVAILABLE</option>
-                  <option value="RESERVED">RESERVED</option>
-                  <option value="DELIVERED">DELIVERED</option>
+                  <SelectTrigger className="h-9 w-28 px-3 py-1 text-sm">
+                    <SelectValue placeholder="Trạng thái" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all">(mọi trạng thái)</SelectItem>
+                    <SelectItem value="AVAILABLE">AVAILABLE</SelectItem>
+                    <SelectItem value="RESERVED">RESERVED</SelectItem>
+                    <SelectItem value="DELIVERED">DELIVERED</SelectItem>
+                  </SelectContent>
                 </Select>
-                <Button
-                  variant="ghost"
-                  uiSize="sm"
-                  onClick={() => void loadStock()}
-                >
+                <Button variant="ghost" size="sm" onClick={() => void loadStock()}>
                   Làm mới
                 </Button>
               </div>
-              <span className="text-[11px] font-semibold text-muted-foreground">
+              <span className="text-[11px] font-semibold text-gray-600">
                 {stockLoading ? "Đang tải…" : `${stockItems.length} dòng kho`}
               </span>
-            </TableHeader>
+            </div>
             <Table>
-              <thead className="bg-muted text-muted-foreground">
+              <thead className="bg-brutal-muted text-gray-600">
                 <tr>
                   <th className="text-left px-3 py-1.5 font-semibold">ID</th>
                   <th className="text-left px-3 py-1.5 font-semibold">
@@ -1590,18 +1254,20 @@ export default function AdminProductDetailPage() {
                 {stockItems.map((s) => (
                   <tr
                     key={s.id}
-                    className="border-t border-border-subtle hover:bg-muted/50"
+                    className="border-t-3 border-brutal hover:bg-brutal-muted"
                   >
-                    <td className="px-3 py-1.5 font-mono text-[10px] text-muted-foreground">
+                    <td className="px-3 py-1.5 font-mono text-[10px] text-gray-600">
                       {s.id}
                     </td>
-                    <td className="px-3 py-1.5 text-foreground">
+                    <td className="px-3 py-1.5 text-brutal-fg">
                       {s.variant_id}
                     </td>
                     <td className="px-3 py-1.5">
-                      <Badge tone={stockBadgeTone(s.status)}>{s.status}</Badge>
+                      <Badge variant={stockStatusVariant(s.status)}>
+                        {s.status}
+                      </Badge>
                     </td>
-                    <td className="px-3 py-1.5 text-foreground">
+                    <td className="px-3 py-1.5 text-brutal-fg">
                       {s.order_id ?? "—"}
                     </td>
                     <td className="px-3 py-1.5 font-mono text-[10px] whitespace-pre-wrap break-all max-w-[400px]">
@@ -1610,8 +1276,8 @@ export default function AdminProductDetailPage() {
                     <td className="px-3 py-1.5 text-right">
                       {s.status === "AVAILABLE" && (
                         <Button
-                          variant="ghost"
-                          uiSize="sm"
+                          variant="danger"
+                          size="sm"
                           onClick={() => onDeleteStock(s.id)}
                         >
                           Xóa
@@ -1622,14 +1288,14 @@ export default function AdminProductDetailPage() {
                 ))}
                 {!stockLoading && stockItems.length === 0 && (
                   <tr>
-                    <td className="px-3 py-3 text-muted-foreground" colSpan={6}>
+                    <td className="px-3 py-3 text-gray-600" colSpan={6}>
                       Chưa có dòng kho.
                     </td>
                   </tr>
                 )}
               </tbody>
             </Table>
-          </TableWrap>
+          </>
         </div>
       )}
     </div>

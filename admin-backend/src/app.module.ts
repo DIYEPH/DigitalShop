@@ -8,11 +8,13 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { AuthModule } from './modules/auth/auth.module';
 import { ProductsModule } from './modules/products/products.module';
-import { CategoriesModule } from './modules/categories/categories.module';
 import { StockModule } from './modules/stock/stock.module';
 import { OrdersModule } from './modules/orders/orders.module';
-import { UsersModule } from './modules/users/users.module';
 import { CouponsModule } from './modules/coupons/coupons.module';
+import { ShopsModule } from './modules/shops/shops.module';
+import { ShopSettingsModule } from './modules/shop-settings/shop-settings.module';
+import { CategoriesModule } from './modules/categories/categories.module';
+import { UsersModule } from './modules/users/users.module';
 import { SimpleHealthController } from './common/controllers/simple-health.controller';
 
 @Module({
@@ -34,11 +36,13 @@ import { SimpleHealthController } from './common/controllers/simple-health.contr
     // Feature modules
     AuthModule,
     ProductsModule,
-    CategoriesModule,
     StockModule,
     OrdersModule,
-    UsersModule,
     CouponsModule,
+    ShopsModule,
+    ShopSettingsModule,
+    CategoriesModule,
+    UsersModule,
   ],
   controllers: [SimpleHealthController],
   providers: [

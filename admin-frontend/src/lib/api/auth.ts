@@ -1,4 +1,5 @@
 import { apiFetch } from "./client";
+import type { SellerShop } from "@/lib/shop-context";
 
 type AuthResponse = {
   access_token: string;
@@ -8,6 +9,8 @@ type AuthResponse = {
     email: string;
     full_name: string;
     role: string;
+    can_create_shop: boolean;
+    shops: SellerShop[];
   };
 };
 
@@ -20,6 +23,8 @@ export async function login(email: string, password: string): Promise<AuthRespon
 }
 
 type AdminProfile = AuthResponse["admin"] & {
+  can_create_shop: boolean;
+  shops: SellerShop[];
   created_at?: string;
   updated_at?: string;
 };

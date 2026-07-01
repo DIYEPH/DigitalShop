@@ -1,57 +1,67 @@
-import type { HTMLAttributes } from "react";
-import { cn } from "@/lib/cn";
+'use client';
 
-type BadgeTone = "success" | "warning" | "muted" | "danger";
+import * as React from 'react';
+import { cva, type VariantProps } from 'class-variance-authority';
+import { cn } from "@/lib/utils";
 
-const toneClass: Record<BadgeTone, string> = {
-  success: "bg-success/10 text-success",
-  warning: "bg-warning/10 text-warning",
-  muted: "bg-muted text-muted-foreground",
-  danger: "bg-danger/10 text-danger",
-};
+const badgeVariants = cva(
+    [
+        'inline-flex items-center',
+        'border-2 border-brutal rounded-brutal',
+        'font-bold tracking-wide',
+        'transition-colors',
+    ],
+    {
+        variants: {
+            variant: {
+                default: [
+                    'bg-brutal-bg text-brutal-fg',
+                    'shadow-brutal-sm',
+                ],
+                primary: [
+                    'bg-brutal-primary text-brutal-fg',
+                    'shadow-brutal-sm',
+                ],
+                secondary: [
+                    'bg-brutal-secondary text-brutal-fg',
+                    'shadow-brutal-sm',
+                ],
+                accent: [
+                    'bg-brutal-accent text-brutal-fg',
+                    'shadow-brutal-sm',
+                ],
+                danger: [
+                    'bg-brutal-destructive text-brutal-fg',
+                    'shadow-brutal-sm',
+                ],
+                success: [
+                    'bg-brutal-success text-brutal-fg',
+                    'shadow-brutal-sm',
+                ],
+                outline: 'bg-transparent text-brutal-fg',
+            },
+            size: {
+                sm: 'px-2 py-0.5 text-xs',
+                default: 'px-3 py-1 text-sm',
+                lg: 'px-4 py-1.5 text-base',
+            },
+        },
+        defaultVariants: {
+            variant: 'default',
+            size: 'default',
+        },
+    }
+);
 
-type Props = HTMLAttributes<HTMLSpanElement> & {
-  tone?: BadgeTone;
-};
+export interface BadgeProps
+    extends React.HTMLAttributes<HTMLDivElement>,
+        VariantProps<typeof badgeVariants> {}
 
-/** Pill trạng thái — thay `<span className="bg-success/10 …">`. */
-export function Badge({
-  tone = "muted",
-  className,
-  children,
-  ...props
-}: Props) {
-  return (
-    <span
-      className={cn(
-        "inline-flex rounded-sm px-1.5 py-0.5 text-[10px] font-semibold",
-        toneClass[tone],
-        className,
-      )}
-      {...props}
-    >
-      {children}
-    </span>
-  );
-}
+const Badge = React.forwardRef<HTMLDivElement, BadgeProps>(
+    ({ className, variant, size, ...props }, ref) => (
+        <div ref={ref} className={cn(badgeVariants({ variant, size, className }))} {...props} />
+    )
+);
+Badge.displayName = 'Badge';
 
-export function stockBadgeTone(status: string): BadgeTone {
-  if (status === "AVAILABLE") return "success";
-  if (status === "RESERVED") return "warning";
-  return "muted";
-}
-
-export function orderStatusBadgeTone(status: string): BadgeTone {
-  if (status === "DELIVERED") return "success";
-  if (status === "PAID") return "muted";
-  if (status === "CANCELLED" || status === "FAILED") return "danger";
-  return "warning";
-}
-
-export function userRoleBadgeTone(role: string): BadgeTone {
-  return role === "ADMIN" ? "success" : "muted";
-}
-
-export function userStatusBadgeTone(status: string): BadgeTone {
-  return status === "BANNED" ? "danger" : "success";
-}
+export { Badge, badgeVariants };

@@ -8,6 +8,7 @@ import { ErrorCodes } from '../../common/enums/error-codes.enum';
 import { FulfillmentType, StockStatus } from '../../common/enums';
 import { AddStockDto } from './dto/add-stock.dto';
 import { StockQueryDto } from './dto/stock-query.dto';
+import { UpdateStockDto } from './dto/update-stock.dto';
 
 type StockRow = {
   id: number;
@@ -28,9 +29,9 @@ export class StockService {
     return getPgPool();
   }
 
-  async findAll(query: StockQueryDto) {
-    const params: unknown[] = [];
-    const conditions: string[] = [];
+  async findAll(shopId: string, query: StockQueryDto) {
+    const params: unknown[] = [shopId];
+    const conditions: string[] = [`p.shop_id = $1::uuid`];
 
     if (query.product_id != null) {
       params.push(query.product_id);
@@ -39,6 +40,10 @@ export class StockService {
     if (query.variant_id != null) {
       params.push(query.variant_id);
       conditions.push(`si.variant_id = $${params.length}`);
+    }
+    if (query.order_id) {
+      params.push(query.order_id);
+      conditions.push(`si.order_id = $${params.length}::uuid`);
     }
     if (query.status) {
       params.push(query.status);
@@ -61,6 +66,7 @@ export class StockService {
           si.created_at
         FROM stock_items si
         INNER JOIN product_variants v ON v.id = si.variant_id
+        INNER JOIN products p ON p.id = v.product_id
         ${where}
         ORDER BY si.id DESC
         LIMIT 500`,
@@ -72,15 +78,16 @@ export class StockService {
     };
   }
 
-  async add(dto: AddStockDto) {
+  async add(shopId: string, dto: AddStockDto) {
     const variant = await this.pool.query<{
       id: number;
       fulfillment_type: string;
     }>(
-      `SELECT id, fulfillment_type::text AS fulfillment_type
-       FROM product_variants
-       WHERE id = $1 AND is_active = TRUE`,
-      [dto.variant_id],
+      `SELECT v.id, v.fulfillment_type::text AS fulfillment_type
+       FROM product_variants v
+       INNER JOIN products p ON p.id = v.product_id
+       WHERE v.id = $1 AND v.is_active = TRUE AND p.shop_id = $2::uuid`,
+      [dto.variant_id, shopId],
     );
 
     const row = variant.rows[0];
@@ -127,10 +134,60 @@ export class StockService {
     return { created: payloads.length };
   }
 
-  async remove(stockItemId: number) {
+  async update(shopId: string, stockItemId: number, dto: UpdateStockDto) {
     const res = await this.pool.query<{ status: string }>(
-      `SELECT status::text AS status FROM stock_items WHERE id = $1`,
-      [stockItemId],
+      `SELECT si.status::text AS status
+       FROM stock_items si
+       INNER JOIN product_variants v ON v.id = si.variant_id
+       INNER JOIN products p ON p.id = v.product_id
+       WHERE si.id = $1 AND p.shop_id = $2::uuid`,
+      [stockItemId, shopId],
+    );
+    const row = res.rows[0];
+    if (!row) {
+      throw new NotFoundException({
+        code: ErrorCodes.STOCK_NOT_FOUND,
+        message: 'Stock item not found',
+      });
+    }
+
+    if (row.status === StockStatus.DELIVERED) {
+      throw new BadRequestException({
+        code: ErrorCodes.STOCK_INVALID_STATUS,
+        message: 'Cannot edit a DELIVERED stock item',
+      });
+    }
+
+    const payload = dto.payload.trim();
+    if (!payload) {
+      throw new BadRequestException({
+        code: ErrorCodes.VALIDATION_ERROR,
+        message: 'Payload is required',
+      });
+    }
+
+    const updated = await this.pool.query<StockRow>(
+      `UPDATE stock_items si
+       SET payload = $2, note = COALESCE($3, si.note), updated_at = NOW()
+       FROM product_variants v
+       WHERE si.id = $1 AND si.variant_id = v.id
+       RETURNING si.id, v.product_id, si.variant_id, si.status::text AS status,
+         si.payload, si.note, si.order_id::text AS order_id,
+         si.reserved_at, si.delivered_at, si.created_at`,
+      [stockItemId, payload, dto.note ?? null],
+    );
+
+    return this.toDto(updated.rows[0]);
+  }
+
+  async remove(shopId: string, stockItemId: number) {
+    const res = await this.pool.query<{ status: string }>(
+      `SELECT si.status::text AS status
+       FROM stock_items si
+       INNER JOIN product_variants v ON v.id = si.variant_id
+       INNER JOIN products p ON p.id = v.product_id
+       WHERE si.id = $1 AND p.shop_id = $2::uuid`,
+      [stockItemId, shopId],
     );
     const row = res.rows[0];
     if (!row) {

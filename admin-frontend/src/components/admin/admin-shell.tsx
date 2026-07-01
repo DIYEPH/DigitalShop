@@ -1,39 +1,28 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { LogOut, Store } from "lucide-react";
 import {
-  FolderTree,
-  LayoutDashboard,
-  LogOut,
-  Settings,
-  Package,
-  ShoppingCart,
-  Ticket,
-  Users,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { getMe, logout } from "@/lib/api/auth";
-import {
-  ADMIN_SESSION_EXPIRED_EVENT,
-  clearAdminSession,
-  readAdminSession,
-} from "@/lib/auth/session";
-import { getAuthToken } from "@/lib/auth/token";
+  Alert,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui";
+import { ADMIN_NAV_ITEMS } from "@/components/admin/admin-shell.constants";
+import { useAdminShell } from "@/components/admin/use-admin-shell";
+import { LANGUAGES } from "@/lib/i18n/constants";
+import { useLanguage } from "@/lib/i18n/use-language";
 import { cn } from "@/lib/cn";
-
-const NAV = [
-  { href: "/admin", label: "Tổng quan", icon: LayoutDashboard },
-  { href: "/admin/products", label: "Sản phẩm", icon: Package },
-  { href: "/admin/orders", label: "Đơn hàng", icon: ShoppingCart },
-  { href: "/admin/categories", label: "Danh mục", icon: FolderTree },
-  { href: "/admin/coupons", label: "Mã giảm giá", icon: Ticket },
-  { href: "/admin/users", label: "Người dùng", icon: Users },
-  { href: "/admin/settings", label: "Cài đặt", icon: Settings },
-] as const;
-
-type AuthState = "checking" | "authed" | "guest";
 
 export default function AdminShell({
   children,
@@ -42,133 +31,180 @@ export default function AdminShell({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [authState, setAuthState] = useState<AuthState>("checking");
-
-  useEffect(() => {
-    const { ok, token } = readAdminSession();
-
-    if (!ok || !token) {
-      clearAdminSession();
-      queueMicrotask(() => setAuthState("guest"));
-      router.replace("/login");
-      return;
-    }
-
-    queueMicrotask(() => setAuthState("authed"));
-
-    let cancelled = false;
-    getMe(token).catch(() => {
-      if (!cancelled) {
-        clearAdminSession();
-        setAuthState("guest");
-        router.replace("/login");
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [router]);
-
-  useEffect(() => {
-    const onExpired = () => {
-      clearAdminSession();
-      setAuthState("guest");
-      router.replace("/login");
-    };
-    window.addEventListener(ADMIN_SESSION_EXPIRED_EVENT, onExpired);
-    return () =>
-      window.removeEventListener(ADMIN_SESSION_EXPIRED_EVENT, onExpired);
-  }, [router]);
-
-  const handleLogout = async () => {
-    const t = getAuthToken();
-    if (t) {
-      try {
-        await logout(t);
-      } catch {
-        // vẫn xóa token local nếu API lỗi
-      }
-    }
-    clearAdminSession();
-    router.push("/login");
-    router.refresh();
-  };
+  const { language, setLanguage, t } = useLanguage();
+  const shell = useAdminShell(router);
 
   const isActive = (href: string) => {
     if (href === "/admin") return pathname === "/admin";
     return pathname.startsWith(href);
   };
 
-  if (authState === "guest") {
+  if (shell.authState === "guest") {
     return null;
   }
 
-  const showNav = authState === "authed";
+  const showNav = shell.authState === "authed";
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-10 border-b border-border bg-surface/95 backdrop-blur-sm">
-        <div className="mx-auto flex h-11 max-w-[1400px] items-center justify-between gap-3 px-3">
-          <div className="flex items-center gap-3">
-            <h1 className="shrink-0 text-sm font-semibold tracking-tight text-gradient-brand">
-              Quản trị
+    <div className="min-h-screen bg-brutal-muted">
+      <header
+        className="sticky top-0 z-100 isolate border-b-3 border-brutal"
+        style={{ backgroundColor: "var(--brutal-bg)" }}
+      >
+        <div className="mx-auto grid max-w-[1400px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2">
+          <div className="min-w-0">
+            <h1 className="shrink-0 text-lg font-black uppercase tracking-[0.08em] text-brutal-fg">
+              {t("shell.title")}
             </h1>
-            {showNav ? (
-              <nav className="hidden items-center gap-0.5 md:flex">
-                {NAV.map((item) => {
-                  const Icon = item.icon;
-                  const active = isActive(item.href);
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={cn(
-                        "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
-                        active
-                          ? "bg-gradient-brand text-primary-foreground shadow-(--shadow-sm) hover:opacity-95"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                      )}
-                    >
-                      <Icon className="icon-sm" aria-hidden />
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </nav>
-            ) : (
-              <div
-                className="hidden h-7 w-48 animate-pulse rounded-md bg-muted md:block"
-                aria-hidden
-              />
-            )}
           </div>
 
           {showNav ? (
-            <Button
-              type="button"
-              variant="ghost"
-              uiSize="sm"
-              aria-label="Đăng xuất"
-              onClick={handleLogout}
-            >
-              <LogOut className="icon-sm" aria-hidden />
-              <span className="hidden sm:inline">Đăng xuất</span>
-            </Button>
+            <nav className="flex min-w-0 gap-2 overflow-x-auto pb-1">
+              {ADMIN_NAV_ITEMS.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "inline-flex shrink-0 items-center gap-1.5 rounded-brutal border-3 border-brutal px-2.5 py-1.5 text-xs font-black uppercase transition-transform",
+                      active
+                        ? "bg-brutal-accent text-brutal-fg shadow-brutal-sm"
+                        : "bg-brutal-bg text-brutal-fg hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-brutal-sm",
+                    )}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                    {t(item.labelKey)}
+                  </Link>
+                );
+              })}
+            </nav>
           ) : (
             <div
-              className="h-7 w-16 animate-pulse rounded-md bg-muted"
+              className="hidden h-7 w-48 animate-pulse rounded-brutal bg-brutal-muted md:block"
+              aria-hidden
+            />
+          )}
+
+          {showNav ? (
+            <div className="flex items-center justify-end gap-2">
+              {shell.shops.length > 0 ? (
+                <Select
+                  value={shell.activeShopId ?? undefined}
+                  onValueChange={shell.handleSelectShop}
+                >
+                  <SelectTrigger
+                    aria-label={t("shell.selectShop")}
+                    className="h-10 w-56 px-3 py-1 text-sm"
+                  >
+                    <Store className="h-4 w-4 shrink-0" aria-hidden />
+                    <SelectValue placeholder={t("shell.selectShop")} />
+                  </SelectTrigger>
+                  <SelectContent
+                    sideOffset={8}
+                    className="z-200"
+                    style={{ backgroundColor: "var(--brutal-bg)" }}
+                  >
+                    {shell.shops.map((shop) => (
+                      <SelectItem key={shop.id} value={shop.id}>
+                        {shop.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : null}
+              <Select
+                value={language}
+                onValueChange={(value) => setLanguage(value as typeof language)}
+              >
+                <SelectTrigger aria-label="Language" className="h-9 w-20 px-3 py-1 text-sm">
+                  <SelectValue placeholder="Lang" />
+                </SelectTrigger>
+                <SelectContent
+                  align="end"
+                  sideOffset={8}
+                  className="z-200"
+                  style={{
+                    backgroundColor: "var(--brutal-bg)",
+                    width: "var(--radix-select-trigger-width)",
+                    minWidth: "var(--radix-select-trigger-width)",
+                  }}
+                >
+                  {LANGUAGES.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                aria-label={t("common.logout")}
+                onClick={shell.handleLogout}
+              >
+                <LogOut className="h-4 w-4 shrink-0" aria-hidden />
+                <span className="hidden sm:inline">{t("common.logout")}</span>
+              </Button>
+            </div>
+          ) : (
+            <div
+              className="h-7 w-16 animate-pulse rounded-brutal bg-brutal-muted"
               aria-hidden
             />
           )}
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1400px] px-3 py-3">
-        {showNav ? (
+      <main className="mx-auto max-w-[1400px] px-3 py-4">
+        {showNav && !shell.shopsLoaded ? (
+          <p className="text-xs font-bold text-gray-600">{t("common.loading")}</p>
+        ) : showNav && shell.shops.length === 0 && shell.profile?.can_create_shop ? (
+          <Card className="mx-auto max-w-xl">
+            <CardHeader>
+              <CardTitle className="text-base">{t("shell.createFirstShop")}</CardTitle>
+              <CardDescription>{t("shell.createFirstShopHint")}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={shell.handleCreateShop} className="grid gap-3">
+                {shell.shopError ? <Alert variant="danger">{shell.shopError}</Alert> : null}
+                <label className="grid gap-1.5">
+                  <span className="text-xs font-black uppercase">{t("shell.shopName")}</span>
+                  <Input
+                    value={shell.shopName}
+                    onChange={(event) => shell.setShopName(event.target.value)}
+                    placeholder="My Digital Shop"
+                    required
+                  />
+                </label>
+                <label className="grid gap-1.5">
+                  <span className="text-xs font-black uppercase">{t("shell.shopSlug")}</span>
+                  <Input
+                    value={shell.shopSlug}
+                    onChange={(event) => shell.setShopSlug(event.target.value)}
+                    placeholder="my-digital-shop"
+                    required
+                  />
+                </label>
+                <Button type="submit" variant="primary" loading={shell.creatingShop}>
+                  {t("shell.createShop")}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        ) : showNav && shell.shops.length === 0 ? (
+          <Card className="mx-auto max-w-xl">
+            <CardHeader>
+              <CardTitle className="text-base">{t("shell.noShop")}</CardTitle>
+              <CardDescription>{t("shell.noShopHint")}</CardDescription>
+            </CardHeader>
+          </Card>
+        ) : showNav ? (
           children
         ) : (
-          <p className="text-xs text-muted-foreground">Đang xác thực…</p>
+          <p className="text-xs text-gray-600">{t("common.loading")}</p>
         )}
       </main>
     </div>

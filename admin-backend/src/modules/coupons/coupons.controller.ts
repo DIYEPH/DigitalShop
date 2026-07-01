@@ -11,7 +11,8 @@ import {
   Query,
 } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
-import { AdminOnly } from "../../common/decorators/admin-only.decorator";
+import { CurrentShop } from "../../common/decorators/current-shop.decorator";
+import { ShopScoped } from "../../common/decorators/shop-scoped.decorator";
 import { CouponQueryDto } from "./dto/coupon-query.dto";
 import { CreateCouponDto } from "./dto/create-coupon.dto";
 import { GrantCouponDto } from "./dto/grant-coupon.dto";
@@ -20,34 +21,38 @@ import { CouponsService } from "./coupons.service";
 
 @ApiTags("Coupons")
 @Controller("coupons")
-@AdminOnly()
+@ShopScoped()
 export class CouponsController {
   constructor(private readonly couponsService: CouponsService) {}
 
   @Get()
   @ApiOperation({ summary: "List coupons (admin)" })
-  findAll(@Query() query: CouponQueryDto) {
-    return this.couponsService.findAll(query);
+  findAll(@CurrentShop("id") shopId: string, @Query() query: CouponQueryDto) {
+    return this.couponsService.findAll(shopId, query);
   }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: "Create coupon" })
-  create(@Body() dto: CreateCouponDto) {
-    return this.couponsService.create(dto);
+  create(@CurrentShop("id") shopId: string, @Body() dto: CreateCouponDto) {
+    return this.couponsService.create(shopId, dto);
   }
 
   @Post("grant")
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: "Grant ownership coupon to users" })
-  grant(@Body() dto: GrantCouponDto) {
-    return this.couponsService.grant(dto);
+  grant(@CurrentShop("id") shopId: string, @Body() dto: GrantCouponDto) {
+    return this.couponsService.grant(shopId, dto);
   }
 
   @Patch(":id")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Update coupon" })
-  update(@Param("id", ParseIntPipe) id: number, @Body() dto: UpdateCouponDto) {
-    return this.couponsService.update(id, dto);
+  update(
+    @CurrentShop("id") shopId: string,
+    @Param("id", ParseIntPipe) id: number,
+    @Body() dto: UpdateCouponDto,
+  ) {
+    return this.couponsService.update(shopId, id, dto);
   }
 }

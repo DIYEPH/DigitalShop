@@ -70,10 +70,10 @@ export class OrdersService {
     return getPgPool();
   }
 
-  async findAll(query: OrderQueryDto) {
+  async findAll(shopId: string, query: OrderQueryDto) {
     const { page, limit, offset } = resolvePagination(query);
-    const params: unknown[] = [];
-    const conditions: string[] = [];
+    const params: unknown[] = [shopId];
+    const conditions: string[] = [`o.shop_id = $1::uuid`];
 
     if (query.status) {
       params.push(query.status);
@@ -137,13 +137,17 @@ export class OrdersService {
     };
   }
 
-  async findOne(id: string) {
-    const order = await this.getOrderRow(id);
+  async findOne(shopId: string, id: string) {
+    const order = await this.getOrderRow(shopId, id);
     if (!order) {
       throw new NotFoundException({
         code: ErrorCodes.ORDER_NOT_FOUND,
         message: `Order ${id} not found`,
       });
+    }
+
+    if (order.status === OrderStatus.PAID) {
+      await this.ensurePreorderSlots(id);
     }
 
     const itemsRes = await this.pool.query<OrderItemRow>(
@@ -173,8 +177,8 @@ export class OrdersService {
     };
   }
 
-  async confirm(id: string, dto: ConfirmOrderDto) {
-    const order = await this.getOrderRow(id);
+  async confirm(shopId: string, id: string, dto: ConfirmOrderDto) {
+    const order = await this.getOrderRow(shopId, id);
     if (!order) {
       throw new NotFoundException({
         code: ErrorCodes.ORDER_NOT_FOUND,
@@ -194,9 +198,9 @@ export class OrdersService {
             paid_at = NOW(),
             tx_id = COALESCE($2, tx_id),
             updated_at = NOW()
-        WHERE id = $1::uuid AND status = 'PENDING'
+        WHERE id = $1::uuid AND shop_id = $3::uuid AND status = 'PENDING'
         RETURNING id::text AS id, status::text AS status`,
-      [id, dto.transaction_hash?.trim() || null],
+      [id, dto.transaction_hash?.trim() || null, shopId],
     );
     const row = res.rows[0];
     if (!row) {
@@ -213,8 +217,8 @@ export class OrdersService {
     };
   }
 
-  async deliver(id: string, dto: DeliverOrderDto) {
-    const order = await this.getOrderRow(id);
+  async deliver(shopId: string, id: string, dto: DeliverOrderDto) {
+    const order = await this.getOrderRow(shopId, id);
     if (!order) {
       throw new NotFoundException({
         code: ErrorCodes.ORDER_NOT_FOUND,
@@ -228,59 +232,64 @@ export class OrdersService {
       });
     }
 
-    const stockLines = await this.tryDeliverInStock(id);
-    if (stockLines === null) {
-      throw new BadRequestException({
-        code: ErrorCodes.ORDER_CANNOT_DELIVER_INCOMPLETE,
-        message: "Could not deliver reserved stock for this order",
-      });
-    }
+    await this.ensurePreorderSlots(id);
 
-    if (stockLines.length > 0) {
-      if (dto.delivery_note?.trim()) {
-        await this.pool.query(
-          `UPDATE orders SET delivery_note = $2, updated_at = NOW() WHERE id = $1::uuid`,
-          [id, dto.delivery_note.trim()],
-        );
-      }
-      const updated = await this.getOrderRow(id);
-      return {
-        id: updated!.id,
-        status: updated!.status,
-        delivered_at: updated!.delivered_at?.toISOString() ?? null,
-      };
-    }
-
-    const res = await this.pool.query<{
-      status: string;
-      delivered_at: Date | null;
+    const counts = await this.pool.query<{
+      expected: number;
+      reserved: number;
+      unfilled: number;
     }>(
-      `UPDATE orders
-        SET status = 'DELIVERED',
-            delivered_at = NOW(),
-            delivery_note = COALESCE($2, delivery_note),
-            updated_at = NOW()
-        WHERE id = $1::uuid AND status = 'PAID'
-        RETURNING status::text AS status, delivered_at`,
-      [id, dto.delivery_note?.trim() || null],
+      `SELECT
+          (SELECT COALESCE(SUM(quantity), 0)::int FROM order_items WHERE order_id = $1::uuid) AS expected,
+          (SELECT COUNT(*)::int FROM stock_items WHERE order_id = $1::uuid AND status = 'RESERVED') AS reserved,
+          (SELECT COUNT(*)::int FROM stock_items
+            WHERE order_id = $1::uuid AND status = 'RESERVED' AND btrim(COALESCE(payload, '')) = '') AS unfilled`,
+      [id],
     );
-    const row = res.rows[0];
-    if (!row) {
+    const { expected, reserved, unfilled } = counts.rows[0];
+
+    if (expected > 0) {
+      if (reserved < expected) {
+        throw new BadRequestException({
+          code: ErrorCodes.ORDER_STOCK_ITEMS_MISMATCH,
+          message: `Order is missing ${expected - reserved} stock slot(s) required to deliver`,
+        });
+      }
+      if (unfilled > 0) {
+        throw new BadRequestException({
+          code: ErrorCodes.ORDER_CANNOT_DELIVER_INCOMPLETE,
+          message: `Cannot deliver: ${unfilled} stock slot(s) still need a payload`,
+        });
+      }
+    }
+
+    const delivered = await this.deliverReservedStock(shopId, id, expected);
+    if (!delivered) {
       throw new BadRequestException({
         code: ErrorCodes.ORDER_CANNOT_DELIVER_INCOMPLETE,
         message: "Order could not be marked delivered",
       });
     }
 
+    if (dto.delivery_note?.trim()) {
+      await this.pool.query(
+        `UPDATE orders
+         SET delivery_note = $2, updated_at = NOW()
+         WHERE id = $1::uuid AND shop_id = $3::uuid`,
+        [id, dto.delivery_note.trim(), shopId],
+      );
+    }
+
+    const updated = await this.getOrderRow(shopId, id);
     return {
-      id,
-      status: row.status,
-      delivered_at: row.delivered_at?.toISOString() ?? null,
+      id: updated!.id,
+      status: updated!.status,
+      delivered_at: updated!.delivered_at?.toISOString() ?? null,
     };
   }
 
-  async listMessages(orderId: string) {
-    await this.assertOrderExists(orderId);
+  async listMessages(shopId: string, orderId: string) {
+    await this.assertOrderExists(shopId, orderId);
     if (!(await this.hasOrderMessagesTable())) {
       return { messages: [] };
     }
@@ -289,20 +298,21 @@ export class OrdersService {
       `SELECT id, order_id::text AS order_id, order_item_id, user_id,
               sender_role::text AS sender_role, kind::text AS kind, message, created_at
        FROM order_messages
-       WHERE order_id = $1::uuid
+       WHERE order_id = $1::uuid AND shop_id = $2::uuid
        ORDER BY id ASC`,
-      [orderId],
+      [orderId, shopId],
     );
 
     return { messages: res.rows.map((row) => this.toMessage(row)) };
   }
 
   async addMessage(
+    shopId: string,
     orderId: string,
     dto: CreateOrderMessageDto,
     adminUserId: number,
   ) {
-    await this.assertOrderExists(orderId);
+    await this.assertOrderExists(shopId, orderId);
     if (!(await this.hasOrderMessagesTable())) {
       throw new BadRequestException({
         code: ErrorCodes.VALIDATION_ERROR,
@@ -313,12 +323,13 @@ export class OrdersService {
     const kind = dto.kind ?? MessageKind.TEXT;
     const res = await this.pool.query<MessageRow>(
       `INSERT INTO order_messages (
-          order_id, order_item_id, user_id, sender_role, kind, message
+          shop_id, order_id, order_item_id, user_id, sender_role, kind, message
         )
-        VALUES ($1::uuid, $2, $3, 'ADMIN', $4::order_message_kind_enum, $5)
+        VALUES ($1::uuid, $2::uuid, $3, $4, 'ADMIN', $5::order_message_kind_enum, $6)
         RETURNING id, order_id::text AS order_id, order_item_id, user_id,
           sender_role::text AS sender_role, kind::text AS kind, message, created_at`,
       [
+        shopId,
         orderId,
         dto.order_item_id ?? null,
         adminUserId,
@@ -330,63 +341,82 @@ export class OrdersService {
     return this.toMessage(res.rows[0]);
   }
 
-  private async tryDeliverInStock(orderId: string): Promise<string[] | null> {
+  /**
+   * Lazily create RESERVED stock slots (empty payload) for every PREORDER unit of a
+   * paid order. Idempotent: only tops up the difference between ordered quantity and
+   * existing RESERVED/DELIVERED rows, so repeated calls never over-provision.
+   */
+  private async ensurePreorderSlots(orderId: string): Promise<void> {
+    await this.pool.query(
+      `WITH need AS (
+          SELECT oi.variant_id,
+                 oi.quantity - COALESCE((
+                   SELECT COUNT(*) FROM stock_items si
+                   WHERE si.order_id = oi.order_id
+                     AND si.variant_id = oi.variant_id
+                     AND si.status IN ('RESERVED', 'DELIVERED')
+                 ), 0) AS missing
+          FROM order_items oi
+          WHERE oi.order_id = $1::uuid AND oi.snapshot_fulfillment_type = 'PREORDER'
+        )
+        INSERT INTO stock_items (variant_id, status, payload, order_id, reserved_at, is_locked)
+        SELECT n.variant_id, 'RESERVED'::stock_status_enum, '', $1::uuid, NOW(), true
+        FROM need n
+        CROSS JOIN LATERAL generate_series(1, GREATEST(n.missing, 0)) AS g
+        WHERE n.missing > 0`,
+      [orderId],
+    );
+  }
+
+  /**
+   * Deliver a PAID order by flipping all its RESERVED stock to DELIVERED inside a
+   * transaction. Requires the delivered count to cover the ordered quantity, otherwise
+   * rolls back and returns false.
+   */
+  private async deliverReservedStock(
+    shopId: string,
+    orderId: string,
+    expectedCount: number,
+  ): Promise<boolean> {
     const client = await this.pool.connect();
     try {
       await client.query("BEGIN");
 
-      const orderResult = await client.query<{
-        all_in_stock: boolean;
-        expected_count: number;
-      }>(
-        `SELECT
-            (SELECT BOOL_AND(snapshot_fulfillment_type = 'IN_STOCK')
-              FROM order_items WHERE order_id = o.id) AS all_in_stock,
-            (SELECT COALESCE(SUM(quantity), 0)::int
-              FROM order_items WHERE order_id = o.id) AS expected_count
-          FROM orders o
-          WHERE o.id = $1::uuid AND o.status = 'PAID'
-          FOR UPDATE OF o`,
-        [orderId],
+      const lock = await client.query(
+        `SELECT id FROM orders
+         WHERE id = $1::uuid AND shop_id = $2::uuid AND status = 'PAID'
+         FOR UPDATE`,
+        [orderId, shopId],
+      );
+      if (!lock.rows[0]) {
+        await client.query("ROLLBACK");
+        return false;
+      }
+
+      const deliverResult = await client.query(
+        `UPDATE stock_items
+         SET status = $2::stock_status_enum,
+             is_locked = false,
+             delivered_at = NOW(),
+             updated_at = NOW()
+         WHERE order_id = $1::uuid AND status = $3::stock_status_enum`,
+        [orderId, StockStatus.DELIVERED, StockStatus.RESERVED],
       );
 
-      if (!orderResult.rows[0]) {
+      if ((deliverResult.rowCount ?? 0) < expectedCount) {
         await client.query("ROLLBACK");
-        return null;
+        return false;
       }
 
-      const { all_in_stock, expected_count } = orderResult.rows[0];
-      if (!all_in_stock || expected_count <= 0) {
-        await client.query("COMMIT");
-        return [];
-      }
-
-      const deliverResult = await client.query<{ payload: string }>(
-        `WITH deliver_stock AS (
-            UPDATE stock_items
-            SET status = $3::stock_status_enum,
-                is_locked = false,
-                delivered_at = NOW(),
-                updated_at = NOW()
-            WHERE order_id = $1::uuid AND status = $2::stock_status_enum
-            RETURNING payload, created_at
-          ),
-          deliver_order AS (
-            UPDATE orders
-            SET status = 'DELIVERED', delivered_at = NOW(), updated_at = NOW()
-            WHERE id = $1::uuid
-          )
-          SELECT payload FROM deliver_stock ORDER BY created_at ASC`,
-        [orderId, StockStatus.RESERVED, StockStatus.DELIVERED],
+      await client.query(
+        `UPDATE orders
+         SET status = 'DELIVERED', delivered_at = NOW(), updated_at = NOW()
+         WHERE id = $1::uuid AND shop_id = $2::uuid AND status = 'PAID'`,
+        [orderId, shopId],
       );
-
-      if ((deliverResult.rowCount ?? 0) < expected_count) {
-        await client.query("ROLLBACK");
-        return null;
-      }
 
       await client.query("COMMIT");
-      return deliverResult.rows.map((r) => r.payload);
+      return true;
     } catch (e) {
       await client.query("ROLLBACK");
       throw e;
@@ -395,7 +425,7 @@ export class OrdersService {
     }
   }
 
-  private async getOrderRow(id: string): Promise<OrderRow | null> {
+  private async getOrderRow(shopId: string, id: string): Promise<OrderRow | null> {
     const res = await this.pool.query<OrderRow>(
       `SELECT
           o.id::text AS id,
@@ -420,16 +450,16 @@ export class OrdersService {
           o.updated_at
         FROM orders o
         INNER JOIN users u ON u.id = o.user_id
-        WHERE o.id = $1::uuid`,
-      [id],
+        WHERE o.id = $1::uuid AND o.shop_id = $2::uuid`,
+      [id, shopId],
     );
     return res.rows[0] ?? null;
   }
 
-  private async assertOrderExists(orderId: string) {
+  private async assertOrderExists(shopId: string, orderId: string) {
     const res = await this.pool.query(
-      `SELECT 1 FROM orders WHERE id = $1::uuid`,
-      [orderId],
+      `SELECT 1 FROM orders WHERE id = $1::uuid AND shop_id = $2::uuid`,
+      [orderId, shopId],
     );
     if (res.rowCount === 0) {
       throw new NotFoundException({

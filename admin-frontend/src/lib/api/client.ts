@@ -1,8 +1,10 @@
 import { notifySessionExpired } from "@/lib/auth/session";
+import { getActiveShopId } from "@/lib/shop-context";
 
 interface FetchOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
   token?: string;
+  shopId?: string | null;
   cache?: RequestCache;
   next?: { revalidate?: number | false; tags?: string[] };
 }
@@ -31,13 +33,17 @@ function parseApiError(json: unknown): { message: string; code?: string } {
 }
 
 async function rawFetch<T>(path: string, opts: FetchOptions): Promise<{ data: T; pagination?: Pagination }> {
-  const { body, token, headers: extra, next, cache, ...rest } = opts;
+  const { body, token, shopId, headers: extra, next, cache, ...rest } = opts;
   const origin = resolveApiOrigin();
   const url = origin ? `${origin}${path}` : path;
 
   const headers = new Headers(extra);
   if (body !== undefined) headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
+  const resolvedShopId = shopId === undefined ? getActiveShopId() : shopId;
+  if (resolvedShopId && shouldAttachShopHeader(path)) {
+    headers.set("X-Shop-Id", resolvedShopId);
+  }
 
   const res = await fetch(url, {
     ...rest,
@@ -68,6 +74,13 @@ async function rawFetch<T>(path: string, opts: FetchOptions): Promise<{ data: T;
   }
 
   return { data: bodyJson.data, pagination: bodyJson.pagination };
+}
+
+function shouldAttachShopHeader(path: string): boolean {
+  if (!path.startsWith("/api/admin/v1/")) return false;
+  if (path.startsWith("/api/admin/v1/auth/")) return false;
+  if (path === "/api/admin/v1/shops") return false;
+  return !path.startsWith("/api/admin/v1/users");
 }
 
 export async function apiFetch<T>(path: string, opts: FetchOptions = {}): Promise<T> {

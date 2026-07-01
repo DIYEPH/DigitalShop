@@ -9,7 +9,7 @@ import * as bcrypt from "bcrypt";
 import { getPgPool } from "../../common/database/pg-pool";
 import { ErrorCodes } from "../../common/enums/error-codes.enum";
 import { jwtExpiresInSeconds } from "../../common/utils/jwt-expires.util";
-import { AdminUser } from "./types/admin-user";
+import { AdminShopMembership, AdminUser } from "./types/admin-user";
 
 type AdminRow = {
   id: number;
@@ -17,6 +17,7 @@ type AdminRow = {
   password: string | null;
   role: string;
   full_name: string | null;
+  can_create_shop: boolean;
   status: string;
   created_at: Date;
   updated_at: Date;
@@ -34,8 +35,12 @@ export class AuthService {
   ) {}
 
   async login(email: string, password: string) {
-    const user = await this.findAdminByEmail(email);
-    if (!user?.password || !(await bcrypt.compare(password, user.password))) {
+    const user = await this.findSellerAdminUserByEmail(email);
+    if (
+      !user?.password ||
+      !(await bcrypt.compare(password, user.password)) ||
+      !(await this.canAccessSellerAdmin(user.id, user.can_create_shop))
+    ) {
       throw new UnauthorizedException({
         code: ErrorCodes.AUTH_INVALID_CREDENTIALS,
         message: "Invalid email or password",
@@ -51,19 +56,23 @@ export class AuthService {
     return {
       access_token,
       expires_in: jwtExpiresInSeconds(),
-      admin: this.toAdminProfile(user),
+      admin: {
+        ...this.toAdminProfile(user),
+        shops: await this.listUserShops(user.id),
+      },
     };
   }
 
   async getActiveAdminById(id: number): Promise<AdminUser | null> {
     const result = await this.pool.query<AdminRow>(
-      `SELECT id, email, role, full_name, status
+      `SELECT id, email, role, full_name, can_create_shop, status
        FROM users
-       WHERE id = $1 AND role = 'ADMIN' AND status = 'ACTIVE'`,
+       WHERE id = $1 AND status = 'ACTIVE'`,
       [id],
     );
     const row = result.rows[0];
     if (!row) return null;
+    if (!(await this.canAccessSellerAdmin(row.id, row.can_create_shop))) return null;
     return this.toAdminProfile(row);
   }
 
@@ -84,6 +93,7 @@ export class AuthService {
 
     return {
       ...admin,
+      shops: await this.listUserShops(userId),
       created_at: meta?.created_at,
       updated_at: meta?.updated_at,
     };
@@ -102,7 +112,7 @@ export class AuthService {
     }
 
     const result = await this.pool.query<Pick<AdminRow, "password">>(
-      `SELECT password FROM users WHERE id = $1 AND role = 'ADMIN' AND status = 'ACTIVE'`,
+      `SELECT password FROM users WHERE id = $1 AND status = 'ACTIVE'`,
       [userId],
     );
     const row = result.rows[0];
@@ -130,24 +140,64 @@ export class AuthService {
     );
   }
 
-  private async findAdminByEmail(email: string): Promise<AdminRow | null> {
+  async listUserShops(userId: number): Promise<AdminShopMembership[]> {
+    const result = await this.pool.query<{
+      shop_id: string;
+      shop_name: string;
+      shop_slug: string;
+      shop_status: string;
+      member_role: string;
+    }>(
+      `SELECT
+          s.id::text AS shop_id,
+          s.name AS shop_name,
+          s.slug AS shop_slug,
+          s.status::text AS shop_status,
+          sm.role::text AS member_role
+       FROM shop_members sm
+       INNER JOIN shops s ON s.id = sm.shop_id
+       WHERE sm.user_id = $1
+       ORDER BY s.created_at ASC`,
+      [userId],
+    );
+    return result.rows;
+  }
+
+  private async findSellerAdminUserByEmail(email: string): Promise<AdminRow | null> {
     const result = await this.pool.query<AdminRow>(
-      `SELECT id, email, password, role, full_name, status, created_at, updated_at
+      `SELECT
+          id, email, password, role, full_name, can_create_shop,
+          status, created_at, updated_at
        FROM users
-       WHERE email = $1 AND role = 'ADMIN' AND status = 'ACTIVE'`,
+       WHERE email = $1 AND status = 'ACTIVE'`,
       [email],
     );
     return result.rows[0] ?? null;
   }
 
+  private async canAccessSellerAdmin(
+    userId: number,
+    canCreateShop: boolean,
+  ): Promise<boolean> {
+    if (canCreateShop) return true;
+    const result = await this.pool.query<{ exists: boolean }>(
+      `SELECT EXISTS (
+         SELECT 1 FROM shop_members WHERE user_id = $1
+       ) AS exists`,
+      [userId],
+    );
+    return Boolean(result.rows[0]?.exists);
+  }
+
   private toAdminProfile(
-    row: Pick<AdminRow, "id" | "email" | "role" | "full_name">,
+    row: Pick<AdminRow, "id" | "email" | "role" | "full_name" | "can_create_shop">,
   ): AdminUser {
     return {
       id: row.id,
       email: row.email,
       full_name: row.full_name,
       role: row.role,
+      can_create_shop: Boolean(row.can_create_shop),
     };
   }
 }

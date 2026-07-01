@@ -64,10 +64,10 @@ export class CouponsService {
     return getPgPool();
   }
 
-  async findAll(query: CouponQueryDto) {
+  async findAll(shopId: string, query: CouponQueryDto) {
     const { page, limit, offset } = resolvePagination(query);
-    const params: unknown[] = [];
-    const conditions: string[] = [];
+    const params: unknown[] = [shopId];
+    const conditions: string[] = [`c.shop_id = $1::uuid`];
 
     if (query.search?.trim()) {
       params.push(`%${query.search.trim()}%`);
@@ -124,28 +124,29 @@ export class CouponsService {
     };
   }
 
-  async create(dto: CreateCouponDto) {
+  async create(shopId: string, dto: CreateCouponDto) {
     const next = await this.resolveCreate(dto);
-    await this.assertVariantExists(next.variant_id);
-    await this.assertCodeUnique(next.code);
-    await this.assertPublicPromoConflict(next);
+    await this.assertVariantExists(shopId, next.variant_id);
+    await this.assertCodeUnique(shopId, next.code);
+    await this.assertPublicPromoConflict(shopId, next);
 
     const res = await this.pool.query<CouponRow>(
       `WITH inserted AS (
          INSERT INTO coupons (
-           code, variant_id, is_active, starts_at, ends_at, visibility,
+           shop_id, code, variant_id, is_active, starts_at, ends_at, visibility,
            requires_ownership, discount_type, percent_bps, amount_usdt, amount_vnd,
            cost_point, max_redemptions, per_user_limit
          )
          VALUES (
-           $1, $2, $3, $4, $5, $6::coupon_visibility_enum,
-           $7, $8::coupon_discount_type_enum, $9, $10, $11,
-           $12, $13, $14
+           $1::uuid, $2, $3, $4, $5, $6, $7::coupon_visibility_enum,
+           $8, $9::coupon_discount_type_enum, $10, $11, $12,
+           $13, $14, $15
          )
          RETURNING *
        )
        ${this.baseSelect("inserted")}`,
       [
+        shopId,
         next.code,
         next.variant_id,
         next.is_active,
@@ -166,8 +167,8 @@ export class CouponsService {
     return this.toResponse(res.rows[0]);
   }
 
-  async update(id: number, dto: UpdateCouponDto) {
-    const existing = await this.getCouponPatch(id);
+  async update(shopId: string, id: number, dto: UpdateCouponDto) {
+    const existing = await this.getCouponPatch(shopId, id);
     if (!existing) {
       throw new NotFoundException({
         code: ErrorCodes.COUPON_NOT_FOUND,
@@ -176,9 +177,9 @@ export class CouponsService {
     }
 
     const next = await this.resolveUpdate(existing, dto);
-    await this.assertVariantExists(next.variant_id);
-    if (next.code !== existing.code) await this.assertCodeUnique(next.code, id);
-    await this.assertPublicPromoConflict(next, id);
+    await this.assertVariantExists(shopId, next.variant_id);
+    if (next.code !== existing.code) await this.assertCodeUnique(shopId, next.code, id);
+    await this.assertPublicPromoConflict(shopId, next, id);
 
     const res = await this.pool.query<CouponRow>(
       `WITH updated AS (
@@ -198,7 +199,7 @@ export class CouponsService {
              max_redemptions = $14,
              per_user_limit = $15,
              updated_at = NOW()
-         WHERE id = $1
+         WHERE id = $1 AND shop_id = $16::uuid
          RETURNING *
        )
        ${this.baseSelect("updated")}`,
@@ -218,13 +219,14 @@ export class CouponsService {
         next.cost_point,
         next.max_redemptions,
         next.per_user_limit,
+        shopId,
       ],
     );
 
     return this.toResponse(res.rows[0]);
   }
 
-  async grant(dto: GrantCouponDto) {
+  async grant(shopId: string, dto: GrantCouponDto) {
     const code = this.normalizeCode(dto.code);
     const userIds = this.parseUserIds(dto.user_ids ?? dto.user_id);
     const quantity = dto.quantity ?? 1;
@@ -249,9 +251,9 @@ export class CouponsService {
       }>(
         `SELECT id, code, is_active, requires_ownership, starts_at, ends_at, per_user_limit
          FROM coupons
-         WHERE UPPER(code) = UPPER($1)
+         WHERE shop_id = $1::uuid AND UPPER(code) = UPPER($2)
          FOR UPDATE`,
-        [code],
+        [shopId, code],
       );
       const coupon = couponRes.rows[0];
       if (!coupon || !coupon.is_active) {
@@ -436,7 +438,7 @@ export class CouponsService {
     return input;
   }
 
-  private async getCouponPatch(id: number): Promise<CouponPatch | null> {
+  private async getCouponPatch(shopId: string, id: number): Promise<CouponPatch | null> {
     const res = await this.pool.query<{
       code: string;
       variant_id: number;
@@ -458,8 +460,8 @@ export class CouponsService {
               amount_usdt::text AS amount_usdt, amount_vnd::text AS amount_vnd,
               cost_point, max_redemptions, per_user_limit
        FROM coupons
-       WHERE id = $1`,
-      [id],
+       WHERE id = $1 AND shop_id = $2::uuid`,
+      [id, shopId],
     );
     const row = res.rows[0];
     if (!row) return null;
@@ -472,10 +474,13 @@ export class CouponsService {
     };
   }
 
-  private async assertVariantExists(variantId: number) {
+  private async assertVariantExists(shopId: string, variantId: number) {
     const res = await this.pool.query<{ id: number }>(
-      `SELECT id FROM product_variants WHERE id = $1 AND is_active = TRUE`,
-      [variantId],
+      `SELECT v.id
+       FROM product_variants v
+       INNER JOIN products p ON p.id = v.product_id
+       WHERE v.id = $1 AND v.is_active = TRUE AND p.shop_id = $2::uuid`,
+      [variantId, shopId],
     );
     if (!res.rows[0]) {
       throw new BadRequestException({
@@ -485,12 +490,15 @@ export class CouponsService {
     }
   }
 
-  private async assertCodeUnique(code: string, exceptId?: number) {
-    const params: unknown[] = [code];
-    const except = exceptId ? `AND id <> $2` : "";
+  private async assertCodeUnique(shopId: string, code: string, exceptId?: number) {
+    const params: unknown[] = [shopId, code];
+    const except = exceptId ? `AND id <> $3` : "";
     if (exceptId) params.push(exceptId);
     const res = await this.pool.query<{ id: number }>(
-      `SELECT id FROM coupons WHERE UPPER(code) = UPPER($1) ${except} LIMIT 1`,
+      `SELECT id
+       FROM coupons
+       WHERE shop_id = $1::uuid AND UPPER(code) = UPPER($2) ${except}
+       LIMIT 1`,
       params,
     );
     if (res.rows[0]) {
@@ -502,6 +510,7 @@ export class CouponsService {
   }
 
   private async assertPublicPromoConflict(
+    shopId: string,
     next: CouponPatch,
     exceptId?: number,
   ) {
@@ -511,19 +520,20 @@ export class CouponsService {
       next.visibility !== CouponVisibility.PUBLIC
     )
       return;
-    const params: unknown[] = [next.variant_id, next.starts_at, next.ends_at];
-    const except = exceptId ? `AND c.id <> $4` : "";
+    const params: unknown[] = [shopId, next.variant_id, next.starts_at, next.ends_at];
+    const except = exceptId ? `AND c.id <> $5` : "";
     if (exceptId) params.push(exceptId);
     const res = await this.pool.query<{ code: string }>(
       `SELECT c.code
        FROM coupons c
-       WHERE c.variant_id = $1
+       WHERE c.shop_id = $1::uuid
+         AND c.variant_id = $2
          AND c.is_active = TRUE
          AND c.requires_ownership = FALSE
          AND c.visibility = 'PUBLIC'
          ${except}
-         AND COALESCE(c.starts_at, '-infinity'::timestamptz) < COALESCE($3::timestamptz, 'infinity'::timestamptz)
-         AND COALESCE($2::timestamptz, '-infinity'::timestamptz) < COALESCE(c.ends_at, 'infinity'::timestamptz)
+         AND COALESCE(c.starts_at, '-infinity'::timestamptz) < COALESCE($4::timestamptz, 'infinity'::timestamptz)
+         AND COALESCE($3::timestamptz, '-infinity'::timestamptz) < COALESCE(c.ends_at, 'infinity'::timestamptz)
        LIMIT 1`,
       params,
     );

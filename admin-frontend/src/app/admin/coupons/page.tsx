@@ -1,385 +1,170 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { ApiError } from "@/lib/api/client";
-import {
-  adminCreateCoupon,
-  adminGetProduct,
-  adminGrantCouponToUser,
-  adminListCoupons,
-  adminListProducts,
-  adminUpdateCoupon,
-  type AdminCoupon,
-  type AdminCreateCouponInput,
-  type AdminProduct,
-  type AdminProductDetail,
-} from "@/lib/api/admin";
-import { useAdminToken } from "@/lib/auth/use-admin-token";
+import { useLanguage } from "@/lib/i18n/use-language";
 import {
   Alert,
   Button,
+  Field,
   Input,
-  Label,
   Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Table,
+  TableBody,
+  TableCell,
+  TableHead,
   TableHeader,
-  TableWrap,
+  TableRow,
 } from "@/components/ui";
-
-const emptyForm: AdminCreateCouponInput = {
-  code: "",
-  discount_type: "PERCENT",
-  percent_bps: 2000,
-  cost_point: 0,
-  visibility: "PUBLIC",
-  requires_ownership: false,
-};
-
-function toDatetimeLocal(value?: string | null): string | undefined {
-  if (!value) return undefined;
-  // Accept already-in datetime-local format
-  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) return value;
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return undefined;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  const mm = pad(d.getMonth() + 1);
-  const dd = pad(d.getDate());
-  const hh = pad(d.getHours());
-  const mi = pad(d.getMinutes());
-  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
-}
+import { toDatetimeLocal } from "./coupons.constants";
+import { useCoupons } from "./coupons.hooks";
 
 export default function AdminCouponsPage() {
-  const token = useAdminToken();
-  const [coupons, setCoupons] = useState<AdminCoupon[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState<AdminCreateCouponInput>(emptyForm);
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [products, setProducts] = useState<AdminProduct[]>([]);
-  const [productId, setProductId] = useState<number | null>(null);
-  const [productDetail, setProductDetail] = useState<AdminProductDetail | null>(
-    null,
-  );
-  const [grant, setGrant] = useState<{
-    user_ids: string;
-    code: string;
-    quantity: string;
-  }>({ user_ids: "", code: "", quantity: "1" });
-  const [tab, setTab] = useState<"promo" | "public" | "voucher" | "shop">(
-    "promo",
-  );
-  const [voucherMode, setVoucherMode] = useState<"create" | "grant">("create");
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setShowForm(false);
-    setForm(emptyForm);
-    setProductId(null);
-    setProductDetail(null);
-    setError(null);
-  };
-
-  useEffect(() => {
-    if (!token) return;
-    Promise.all([
-      adminListCoupons(token),
-      adminListProducts(token, { page: 1, limit: 100 }),
-    ])
-      .then(([c, p]) => {
-        setCoupons(c.coupons);
-        setProducts(p.data);
-      })
-      .catch((e: unknown) =>
-        setError(
-          e instanceof ApiError ? e.message : "Không tải được mã / sản phẩm.",
-        ),
-      )
-      .finally(() => setLoading(false));
-  }, [token]);
-
-  useEffect(() => {
-    if (!token || !productId) return;
-    adminGetProduct(token, productId)
-      .then((p) => setProductDetail(p))
-      .catch(() => setProductDetail(null));
-  }, [token, productId]);
-
-  const rows = useMemo(() => {
-    if (tab === "promo")
-      return coupons.filter(
-        (c) => !c.requires_ownership && c.visibility !== "PUBLIC",
-      );
-    if (tab === "public")
-      return coupons.filter(
-        (c) => !c.requires_ownership && c.visibility === "PUBLIC",
-      );
-    if (tab === "voucher")
-      return coupons.filter(
-        (c) => Boolean(c.requires_ownership) && Number(c.cost_point || 0) === 0,
-      );
-    return coupons.filter(
-      (c) => Boolean(c.requires_ownership) && Number(c.cost_point || 0) > 0,
-    );
-  }, [coupons, tab]);
-  const percentUi = useMemo(
-    () =>
-      form.discount_type === "PERCENT" ? (form.percent_bps ?? 0) / 100 : 0,
-    [form.discount_type, form.percent_bps],
-  );
-
-  const onCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!token) return;
-    setSaving(true);
-    setError(null);
-    try {
-      // Backend expects bps (10000=100%). UI input writes bps directly (value*100).
-      const forced: AdminCreateCouponInput =
-        tab === "promo"
-          ? {
-              ...form,
-              requires_ownership: false,
-              cost_point: 0,
-              visibility: "PRIVATE",
-            }
-          : tab === "public"
-            ? {
-                ...form,
-                requires_ownership: false,
-                cost_point: 0,
-                visibility: "PUBLIC",
-              }
-            : tab === "voucher"
-              ? {
-                  ...form,
-                  requires_ownership: true,
-                  cost_point: 0,
-                  visibility: "PRIVATE",
-                }
-              : {
-                  ...form,
-                  requires_ownership: true,
-                  cost_point: Number(form.cost_point ?? 0) || 0,
-                };
-
-      if (tab === "promo" || tab === "public" || tab === "shop") {
-        if (!forced.variant_id) {
-          throw new ApiError("Mã giảm phải áp cho một biến thể.", 400);
-        }
-      }
-
-      if (editingId) {
-        const updated = await adminUpdateCoupon(token, editingId, forced);
-        setCoupons((prev) =>
-          prev.map((c) => (c.id === updated.id ? { ...c, ...updated } : c)),
-        );
-      } else {
-        const created = await adminCreateCoupon(token, forced);
-        setCoupons((prev) => [created, ...prev]);
-      }
-      setForm(emptyForm);
-      setShowForm(false);
-      setEditingId(null);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Lưu mã thất bại.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const onToggleActive = async (c: AdminCoupon, next: boolean) => {
-    if (!token) return;
-    setSaving(true);
-    setError(null);
-    try {
-      const updated = await adminUpdateCoupon(token, c.id, { is_active: next });
-      setCoupons((prev) =>
-        prev.map((x) => (x.id === updated.id ? { ...x, ...updated } : x)),
-      );
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Cập nhật mã thất bại.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const startEdit = (c: AdminCoupon) => {
-    const nextTab: typeof tab = c.requires_ownership
-      ? Number(c.cost_point || 0) > 0
-        ? "shop"
-        : "voucher"
-      : c.visibility === "PUBLIC"
-        ? "public"
-        : "promo";
-    setTab(nextTab);
-    setEditingId(c.id);
-    setShowForm(true);
-    setForm({
-      code: c.code,
-      discount_type: c.discount_type,
-      percent_bps: c.percent_bps ?? undefined,
-      amount_usdt: c.amount_usdt ? Number(c.amount_usdt) : undefined,
-      amount_vnd: c.amount_vnd ? Number(c.amount_vnd) : undefined,
-      cost_point: c.cost_point,
-      is_active: c.is_active,
-      starts_at: toDatetimeLocal(c.starts_at) ?? undefined,
-      ends_at: toDatetimeLocal(c.ends_at) ?? undefined,
-      max_redemptions: c.max_redemptions ?? undefined,
-      per_user_limit: c.per_user_limit ?? undefined,
-      visibility: c.visibility,
-      requires_ownership: c.requires_ownership,
-      variant_id: c.variant_id,
-    });
-    setProductId(c.product_id);
-  };
-
-  const onGrant = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!token) return;
-    setSaving(true);
-    setError(null);
-    try {
-      await adminGrantCouponToUser(token, {
-        user_ids: grant.user_ids,
-        code: grant.code,
-        quantity: grant.quantity ? Number(grant.quantity) : undefined,
-      });
-      setGrant({ user_ids: "", code: "", quantity: "1" });
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Cấp mã thất bại.");
-    } finally {
-      setSaving(false);
-    }
-  };
+  const { t } = useLanguage();
+  const {
+    loading,
+    saving,
+    error,
+    products,
+    productDetail,
+    productId,
+    form,
+    grant,
+    tab,
+    voucherMode,
+    showForm,
+    editingId,
+    rows,
+    percentUi,
+    setForm,
+    setGrant,
+    setProductId,
+    setVoucherMode,
+    setShowForm,
+    setEditingId,
+    cancelEdit,
+    onCreate,
+    onToggleActive,
+    startEdit,
+    onGrant,
+    openCreate,
+    selectTab,
+  } = useCoupons();
 
   return (
     <div className="grid gap-2">
-      {error ? (
-        <Alert tone="error" onDismiss={() => setError(null)}>
-          {error}
-        </Alert>
-      ) : null}
+      <div>
+        <h1 className="text-lg font-semibold tracking-tight text-brutal-fg">
+          {t("nav.coupons")}
+        </h1>
+        <p className="text-sm text-gray-600">{t("coupons.subtitle")}</p>
+      </div>
 
-      <TableWrap>
-        <TableHeader>
-          <div className="flex items-center gap-2">
+      {error ? <Alert variant="danger">{error}</Alert> : null}
+
+      <>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-brutal border-3 border-brutal bg-brutal-bg p-3 shadow-brutal-sm">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
-              uiSize="sm"
+              size="sm"
               variant={tab === "promo" ? "primary" : "ghost"}
-              onClick={() => {
-                if (editingId) cancelEdit();
-                setTab("promo");
-              }}
+              onClick={() => selectTab("promo")}
             >
-              Promo (theo biến thể)
+              {t("coupons.tabPromo")}
             </Button>
             <Button
               type="button"
-              uiSize="sm"
+              size="sm"
               variant={tab === "voucher" ? "primary" : "ghost"}
-              onClick={() => {
-                if (editingId) cancelEdit();
-                setTab("voucher");
-                setVoucherMode("create");
-              }}
+              onClick={() => selectTab("voucher")}
             >
-              Voucher (cấp người dùng)
+              {t("coupons.tabVoucher")}
             </Button>
             <Button
               type="button"
-              uiSize="sm"
+              size="sm"
               variant={tab === "public" ? "primary" : "ghost"}
-              onClick={() => {
-                if (editingId) cancelEdit();
-                setTab("public");
-              }}
+              onClick={() => selectTab("public")}
             >
-              Coupon công khai
+              {t("coupons.tabPublic")}
             </Button>
             <Button
               type="button"
-              uiSize="sm"
+              size="sm"
               variant={tab === "shop" ? "primary" : "ghost"}
-              onClick={() => {
-                if (editingId) cancelEdit();
-                setTab("shop");
-              }}
+              onClick={() => selectTab("shop")}
             >
-              Cửa hàng (đổi điểm)
+              {t("coupons.tabShop")}
             </Button>
-            <div className="ml-2 text-xs font-bold text-muted-foreground">
-              {loading ? "Đang tải…" : `${rows.length} mục`}
+            <div className="ml-2 text-xs font-bold text-gray-600">
+              {loading
+                ? t("common.loading")
+                : `${rows.length} ${t("coupons.itemsUnit")}`}
             </div>
           </div>
           <Button
-            uiSize="sm"
-            onClick={() => {
-              if (showForm) return cancelEdit();
-              setEditingId(null);
-              setForm(emptyForm);
-              setProductId(null);
-              setShowForm(true);
-            }}
+            variant={showForm ? "ghost" : "primary"}
+            size="sm"
+            onClick={() => (showForm ? cancelEdit() : openCreate())}
           >
-            {showForm ? "Hủy" : "+ Mới"}
+            {showForm ? t("common.cancel") : `+ ${t("common.new")}`}
           </Button>
-        </TableHeader>
+        </div>
 
         {showForm && (tab !== "voucher" || voucherMode === "create") && (
           <form
             onSubmit={onCreate}
-            className="border-b border-border bg-muted/40 p-3"
+            className="border-b-3 border-brutal bg-brutal-muted p-3"
           >
-            <div className="mb-2 text-[11px] font-black text-foreground">
+            <div className="mb-2 text-[11px] font-black text-brutal-fg">
               {editingId
-                ? `Sửa mã #${editingId}`
+                ? `${t("coupons.editTitle")} #${editingId}`
                 : tab === "promo"
-                  ? "Tạo mã khuyến (theo biến thể)"
+                  ? t("coupons.createPromo")
                   : tab === "public"
-                    ? "Tạo mã công khai"
+                    ? t("coupons.createPublic")
                     : tab === "voucher"
-                      ? "Tạo voucher (cấp tay)"
-                      : "Tạo mã đổi điểm"}
+                      ? t("coupons.createVoucher")
+                      : t("coupons.createShop")}
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              <label className="grid gap-0.5">
-                <Label>Mã</Label>
+              <Field label={t("coupons.code")}>
                 <Input
-                  uiSize="sm"
+                  size="sm"
                   value={form.code}
                   onChange={(e) =>
                     setForm((p) => ({ ...p, code: e.target.value }))
                   }
                   placeholder="SUMMER10"
                 />
-              </label>
-              <label className="grid gap-0.5">
-                <Label>Loại</Label>
+              </Field>
+              <Field label={t("coupons.type")}>
                 <Select
-                  uiSize="sm"
                   value={form.discount_type}
-                  onChange={(e) =>
+                  onValueChange={(value) =>
                     setForm((p) => ({
                       ...p,
-                      discount_type: e.target.value as "PERCENT" | "FIXED",
+                      discount_type: value as "PERCENT" | "FIXED",
                     }))
                   }
                 >
-                  <option value="PERCENT">PERCENT</option>
-                  <option value="FIXED">FIXED</option>
+                  <SelectTrigger className="h-9 px-3 py-1 text-sm">
+                    <SelectValue placeholder={t("coupons.type")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PERCENT">PERCENT</SelectItem>
+                    <SelectItem value="FIXED">FIXED</SelectItem>
+                  </SelectContent>
                 </Select>
-              </label>
+              </Field>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mt-2">
-              <label className="grid gap-0.5">
-                <Label>Phần trăm (%)</Label>
+              <Field label={t("coupons.percent")}>
                 <Input
-                  uiSize="sm"
+                  size="sm"
                   type="number"
                   value={percentUi}
                   onChange={(e) =>
@@ -390,11 +175,10 @@ export default function AdminCouponsPage() {
                   }
                   disabled={form.discount_type !== "PERCENT"}
                 />
-              </label>
-              <label className="grid gap-0.5">
-                <Label>USDT</Label>
+              </Field>
+              <Field label="USDT">
                 <Input
-                  uiSize="sm"
+                  size="sm"
                   type="number"
                   value={form.amount_usdt ?? ""}
                   onChange={(e) =>
@@ -408,11 +192,10 @@ export default function AdminCouponsPage() {
                   }
                   disabled={form.discount_type !== "FIXED"}
                 />
-              </label>
-              <label className="grid gap-0.5">
-                <Label>VND</Label>
+              </Field>
+              <Field label="VND">
                 <Input
-                  uiSize="sm"
+                  size="sm"
                   type="number"
                   value={form.amount_vnd ?? ""}
                   onChange={(e) =>
@@ -426,12 +209,11 @@ export default function AdminCouponsPage() {
                   }
                   disabled={form.discount_type !== "FIXED"}
                 />
-              </label>
+              </Field>
               {tab === "shop" ? (
-                <label className="grid gap-0.5">
-                  <Label>Giá (điểm)</Label>
+                <Field label={t("coupons.costPoint")}>
                   <Input
-                    uiSize="sm"
+                    size="sm"
                     type="number"
                     value={form.cost_point ?? 0}
                     onChange={(e) =>
@@ -441,14 +223,13 @@ export default function AdminCouponsPage() {
                       }))
                     }
                   />
-                </label>
+                </Field>
               ) : null}
             </div>
             <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mt-2">
-              <label className="grid gap-0.5">
-                <Label>Tối đa / người</Label>
+              <Field label={t("coupons.perUser")}>
                 <Input
-                  uiSize="sm"
+                  size="sm"
                   type="number"
                   value={form.per_user_limit ?? ""}
                   onChange={(e) =>
@@ -461,11 +242,10 @@ export default function AdminCouponsPage() {
                     }))
                   }
                 />
-              </label>
-              <label className="grid gap-0.5">
-                <Label>Tối đa toàn hệ</Label>
+              </Field>
+              <Field label={t("coupons.maxTotal")}>
                 <Input
-                  uiSize="sm"
+                  size="sm"
                   type="number"
                   value={form.max_redemptions ?? ""}
                   onChange={(e) =>
@@ -478,45 +258,50 @@ export default function AdminCouponsPage() {
                     }))
                   }
                 />
-              </label>
-              <label className="grid gap-0.5">
-                <Label>Kích hoạt</Label>
+              </Field>
+              <Field label={t("coupons.active")}>
                 <Select
-                  uiSize="sm"
                   value={String(form.is_active ?? true)}
-                  onChange={(e) =>
+                  onValueChange={(value) =>
                     setForm((p) => ({
                       ...p,
-                      is_active: e.target.value === "true",
+                      is_active: value === "true",
                     }))
                   }
                 >
-                  <option value="true">có</option>
-                  <option value="false">không</option>
+                  <SelectTrigger className="h-9 px-3 py-1 text-sm">
+                    <SelectValue placeholder={t("coupons.active")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">{t("common.yes")}</SelectItem>
+                    <SelectItem value="false">{t("common.no")}</SelectItem>
+                  </SelectContent>
                 </Select>
-              </label>
+              </Field>
               {tab !== "public" ? (
-                <label className="grid gap-0.5">
-                  <Label>Hiển thị</Label>
+                <Field label={t("coupons.visibility")}>
                   <Select
-                    uiSize="sm"
                     value={form.visibility ?? "PUBLIC"}
-                    onChange={(e) =>
+                    onValueChange={(value) =>
                       setForm((p) => ({
                         ...p,
-                        visibility: e.target.value as "PUBLIC" | "PRIVATE",
+                        visibility: value as "PUBLIC" | "PRIVATE",
                       }))
                     }
                   >
-                    <option value="PUBLIC">PUBLIC</option>
-                    <option value="PRIVATE">PRIVATE</option>
+                    <SelectTrigger className="h-9 px-3 py-1 text-sm">
+                      <SelectValue placeholder={t("coupons.visibility")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PUBLIC">PUBLIC</SelectItem>
+                      <SelectItem value="PRIVATE">PRIVATE</SelectItem>
+                    </SelectContent>
                   </Select>
-                </label>
+                </Field>
               ) : null}
-              <label className="grid gap-0.5">
-                <Label>Bắt đầu</Label>
+              <Field label={t("coupons.startAt")}>
                 <Input
-                  uiSize="sm"
+                  size="sm"
                   type="datetime-local"
                   value={form.starts_at ?? ""}
                   onChange={(e) =>
@@ -526,11 +311,10 @@ export default function AdminCouponsPage() {
                     }))
                   }
                 />
-              </label>
-              <label className="grid gap-0.5">
-                <Label>Kết thúc</Label>
+              </Field>
+              <Field label={t("coupons.endAt")}>
                 <Input
-                  uiSize="sm"
+                  size="sm"
                   type="datetime-local"
                   value={form.ends_at ?? ""}
                   onChange={(e) =>
@@ -540,85 +324,98 @@ export default function AdminCouponsPage() {
                     }))
                   }
                 />
-              </label>
+              </Field>
             </div>
 
             {tab === "promo" || tab === "public" || tab === "shop" ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-                <label className="grid gap-0.5">
-                  <Label>Sản phẩm</Label>
+                <Field label={t("coupons.product")}>
                   <Select
-                    uiSize="sm"
-                    value={productId ? String(productId) : ""}
-                    onChange={(e) => {
-                      const v = e.target.value ? Number(e.target.value) : null;
+                    value={productId ? String(productId) : "__none"}
+                    onValueChange={(value) => {
+                      const v = value === "__none" ? null : Number(value);
                       setProductId(v);
                       setForm((p) => ({ ...p, variant_id: undefined }));
                     }}
                   >
-                    <option value="">Chọn sản phẩm…</option>
-                    {products.map((p) => (
-                      <option key={p.id} value={String(p.id)}>
-                        {p.name}
-                      </option>
-                    ))}
+                    <SelectTrigger className="h-9 px-3 py-1 text-sm">
+                      <SelectValue placeholder={t("coupons.chooseProduct")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none">
+                        {t("coupons.chooseProduct")}
+                      </SelectItem>
+                      {products.map((p) => (
+                        <SelectItem key={p.id} value={String(p.id)}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
-                </label>
+                </Field>
 
-                <label className="grid gap-0.5">
-                  <Label>Biến thể</Label>
+                <Field label={t("coupons.variant")}>
                   <Select
-                    uiSize="sm"
-                    value={form.variant_id ? String(form.variant_id) : ""}
+                    value={form.variant_id ? String(form.variant_id) : "__none"}
                     disabled={!productDetail}
-                    onChange={(e) =>
+                    onValueChange={(value) =>
                       setForm((p) => ({
                         ...p,
-                        variant_id: e.target.value
-                          ? Number(e.target.value)
-                          : undefined,
+                        variant_id:
+                          value !== "__none" ? Number(value) : undefined,
                       }))
                     }
                   >
-                    <option value="">Chọn biến thể…</option>
-                    {(productDetail?.variants ?? []).map((v) => {
-                      const planLabel = v.plan?.name || v.plan?.slug || "";
-                      const variantLabel = v.name || "";
-                      return (
-                        <option key={v.id} value={String(v.id)}>
-                          #{v.id}{" "}
-                          {planLabel
-                            ? `${planLabel} · ${variantLabel}`
-                            : variantLabel}
-                        </option>
-                      );
-                    })}
+                    <SelectTrigger className="h-9 px-3 py-1 text-sm">
+                      <SelectValue placeholder={t("coupons.chooseVariant")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none">
+                        {t("coupons.chooseVariant")}
+                      </SelectItem>
+                      {(productDetail?.variants ?? []).map((v) => {
+                        const planLabel = v.plan?.name || v.plan?.slug || "";
+                        const variantLabel = v.name || "";
+                        return (
+                          <SelectItem key={v.id} value={String(v.id)}>
+                            #{v.id}{" "}
+                            {planLabel
+                              ? `${planLabel} · ${variantLabel}`
+                              : variantLabel}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
                   </Select>
-                </label>
+                </Field>
               </div>
             ) : null}
             <div className="flex justify-end mt-2">
-              <Button type="submit" uiSize="sm" disabled={saving}>
-                {saving ? "Đang lưu…" : editingId ? "Lưu" : "Tạo"}
+              <Button type="submit" variant="primary" size="sm" disabled={saving}>
+                {saving
+                  ? t("common.saving")
+                  : editingId
+                    ? t("common.save")
+                    : t("common.create")}
               </Button>
             </div>
           </form>
         )}
 
         {tab === "voucher" ? (
-          <div className="border-b border-border bg-surface px-3 pt-3">
-            <div className="inline-flex gap-1 rounded-md border border-border p-0.5">
+          <div className="border-b-3 border-brutal bg-brutal-bg px-3 pt-3">
+            <div className="inline-flex gap-1 rounded-brutal border-3 border-brutal p-0.5">
               <Button
                 type="button"
-                uiSize="sm"
+                size="sm"
                 variant={voucherMode === "create" ? "primary" : "ghost"}
                 onClick={() => setVoucherMode("create")}
               >
-                Tạo voucher
+                {t("coupons.voucherCreate")}
               </Button>
               <Button
                 type="button"
-                uiSize="sm"
+                size="sm"
                 variant={voucherMode === "grant" ? "primary" : "ghost"}
                 onClick={() => {
                   setVoucherMode("grant");
@@ -626,7 +423,7 @@ export default function AdminCouponsPage() {
                   setEditingId(null);
                 }}
               >
-                Cấp cho user
+                {t("coupons.voucherGrant")}
               </Button>
             </div>
           </div>
@@ -635,168 +432,158 @@ export default function AdminCouponsPage() {
         {tab === "voucher" && voucherMode === "grant" ? (
           <form
             onSubmit={onGrant}
-            className="border-b border-border bg-surface p-3"
+            className="border-b-3 border-brutal bg-brutal-bg p-3"
           >
-            <div className="text-xs font-black text-foreground">
-              Cấp mã cho người dùng
+            <div className="text-xs font-black text-brutal-fg">
+              {t("coupons.grantTitle")}
             </div>
             <div className="grid grid-cols-3 gap-2 mt-2">
-              <label className="grid gap-0.5">
-                <Label>ID user (cách nhau bởi dấu phẩy)</Label>
+              <Field label={t("coupons.userIds")}>
                 <Input
-                  uiSize="sm"
+                  size="sm"
                   value={grant.user_ids}
                   onChange={(e) =>
                     setGrant((p) => ({ ...p, user_ids: e.target.value }))
                   }
                   placeholder="123,124,125"
                 />
-              </label>
-              <label className="grid gap-0.5">
-                <Label>Mã voucher</Label>
+              </Field>
+              <Field label={t("coupons.voucherCode")}>
                 <Select
-                  uiSize="sm"
-                  value={grant.code}
-                  onChange={(e) =>
-                    setGrant((p) => ({ ...p, code: e.target.value }))
+                  value={grant.code || "__none"}
+                  onValueChange={(value) =>
+                    setGrant((p) => ({
+                      ...p,
+                      code: value === "__none" ? "" : value,
+                    }))
                   }
                 >
-                  <option value="">Chọn mã…</option>
-                  {rows.map((c) => (
-                    <option key={c.id} value={c.code}>
-                      {c.code}
-                    </option>
-                  ))}
+                  <SelectTrigger className="h-9 px-3 py-1 text-sm">
+                    <SelectValue placeholder={t("coupons.chooseCode")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">
+                      {t("coupons.chooseCode")}
+                    </SelectItem>
+                    {rows.map((c) => (
+                      <SelectItem key={c.id} value={c.code}>
+                        {c.code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
-              </label>
-              <label className="grid gap-0.5">
-                <Label>Số lượng</Label>
+              </Field>
+              <Field label={t("coupons.quantity")}>
                 <Input
-                  uiSize="sm"
+                  size="sm"
                   value={grant.quantity}
                   onChange={(e) =>
                     setGrant((p) => ({ ...p, quantity: e.target.value }))
                   }
                   placeholder="1"
                 />
-              </label>
+              </Field>
             </div>
             <div className="flex justify-end mt-2">
-              <Button type="submit" uiSize="sm" disabled={saving}>
-                Cấp
+              <Button type="submit" variant="primary" size="sm" disabled={saving}>
+                {t("coupons.grant")}
               </Button>
             </div>
           </form>
         ) : null}
 
         <Table>
-          <thead className="bg-muted text-muted-foreground">
-            <tr>
-              <th className="text-left px-3 py-1.5 font-bold">Mã</th>
+          <TableHeader>
+            <TableRow className="border-t-0">
+              <TableHead>{t("coupons.code")}</TableHead>
               {tab === "promo" || tab === "public" || tab === "shop" ? (
-                <th className="text-left px-3 py-1.5 font-bold">Phạm vi</th>
+                <TableHead>{t("coupons.scope")}</TableHead>
               ) : null}
-              <th className="text-left px-3 py-1.5 font-bold">Loại</th>
-              <th className="text-left px-3 py-1.5 font-bold">Giảm</th>
+              <TableHead>{t("coupons.type")}</TableHead>
+              <TableHead>{t("coupons.discount")}</TableHead>
               {tab === "shop" ? (
-                <th className="text-left px-3 py-1.5 font-bold">ĐIỂM</th>
+                <TableHead>{t("coupons.points")}</TableHead>
               ) : null}
               {tab === "voucher" ? (
-                <th className="text-left px-3 py-1.5 font-bold">
-                  Tối đa/người
-                </th>
+                <TableHead>{t("coupons.perUser")}</TableHead>
               ) : null}
               {tab === "voucher" ? (
-                <th className="text-left px-3 py-1.5 font-bold">Tối đa</th>
+                <TableHead>{t("coupons.max")}</TableHead>
               ) : null}
               {tab === "promo" || tab === "public" ? (
-                <th className="text-left px-3 py-1.5 font-bold">Bắt đầu</th>
+                <TableHead>{t("coupons.startAt")}</TableHead>
               ) : null}
               {tab === "promo" || tab === "public" ? (
-                <th className="text-left px-3 py-1.5 font-bold">Kết thúc</th>
+                <TableHead>{t("coupons.endAt")}</TableHead>
               ) : null}
-              <th className="text-left px-3 py-1.5 font-bold">Bật</th>
-              <th className="text-left px-3 py-1.5 font-bold">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
+              <TableHead>{t("coupons.enabled")}</TableHead>
+              <TableHead>{t("common.actions")}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {rows.map((c) => (
-              <tr
-                key={c.id}
-                className="border-t border-border-subtle hover:bg-muted/40"
-              >
-                <td className="px-3 py-1.5 font-bold text-foreground">
-                  {c.code}
-                </td>
+              <TableRow key={c.id}>
+                <TableCell className="font-semibold">{c.code}</TableCell>
                 {tab === "promo" || tab === "public" || tab === "shop" ? (
-                  <td className="px-3 py-1.5 text-foreground">
-                    <div className="text-[11px] font-bold text-foreground">
-                      {c.variant_label || `Biến thể: ${c.variant_id}`}
-                    </div>
-                  </td>
+                  <TableCell>
+                    {c.variant_label ||
+                      `${t("coupons.variantLabel")}: ${c.variant_id}`}
+                  </TableCell>
                 ) : null}
-                <td className="px-3 py-1.5 text-foreground">
-                  {c.discount_type}
-                </td>
-                <td className="px-3 py-1.5 text-foreground">
+                <TableCell>{c.discount_type}</TableCell>
+                <TableCell>
                   {c.discount_type === "PERCENT"
                     ? `${(c.percent_bps ?? 0) / 100}%`
                     : `${c.amount_usdt ?? "—"} USDT / ${c.amount_vnd ?? "—"} VND`}
-                </td>
-                {tab === "shop" ? (
-                  <td className="px-3 py-1.5 font-bold text-foreground">
-                    {c.cost_point}
-                  </td>
+                </TableCell>
+                {tab === "shop" ? <TableCell>{c.cost_point}</TableCell> : null}
+                {tab === "voucher" ? (
+                  <TableCell>{c.per_user_limit ?? "—"}</TableCell>
                 ) : null}
                 {tab === "voucher" ? (
-                  <td className="px-3 py-1.5 text-foreground">
-                    {c.per_user_limit ?? "—"}
-                  </td>
-                ) : null}
-                {tab === "voucher" ? (
-                  <td className="px-3 py-1.5 text-foreground">
-                    {c.max_redemptions ?? "—"}
-                  </td>
+                  <TableCell>{c.max_redemptions ?? "—"}</TableCell>
                 ) : null}
                 {tab === "promo" || tab === "public" ? (
-                  <td className="px-3 py-1.5 text-foreground">
+                  <TableCell>
                     {c.starts_at ? toDatetimeLocal(c.starts_at) : "—"}
-                  </td>
+                  </TableCell>
                 ) : null}
                 {tab === "promo" || tab === "public" ? (
-                  <td className="px-3 py-1.5 text-foreground">
+                  <TableCell>
                     {c.ends_at ? toDatetimeLocal(c.ends_at) : "—"}
-                  </td>
+                  </TableCell>
                 ) : null}
-                <td className="px-3 py-1.5">
+                <TableCell>
                   <Select
-                    uiSize="sm"
                     value={String(Boolean(c.is_active))}
                     disabled={saving}
-                    onChange={(e) =>
-                      onToggleActive(c, e.target.value === "true")
-                    }
+                    onValueChange={(value) => onToggleActive(c, value === "true")}
                   >
-                    <option value="true">bật</option>
-                    <option value="false">tắt</option>
+                    <SelectTrigger className="h-9 px-3 py-1 text-sm">
+                      <SelectValue placeholder={t("coupons.enabled")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="true">{t("common.on")}</SelectItem>
+                      <SelectItem value="false">{t("common.off")}</SelectItem>
+                    </SelectContent>
                   </Select>
-                </td>
-                <td className="px-3 py-1.5">
+                </TableCell>
+                <TableCell>
                   <Button
-                    uiSize="sm"
+                    size="sm"
                     variant="ghost"
                     type="button"
                     onClick={() => startEdit(c)}
                   >
-                    Sửa
+                    {t("common.edit")}
                   </Button>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
             {!loading && rows.length === 0 && (
-              <tr>
-                <td
-                  className="px-3 py-3 text-muted-foreground"
+              <TableRow>
+                <TableCell
+                  className="text-gray-600"
                   colSpan={
                     tab === "promo" || tab === "public"
                       ? 7
@@ -805,13 +592,13 @@ export default function AdminCouponsPage() {
                         : 6
                   }
                 >
-                  Chưa có mã.
-                </td>
-              </tr>
+                  {t("coupons.empty")}
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
+          </TableBody>
         </Table>
-      </TableWrap>
+      </>
     </div>
   );
 }

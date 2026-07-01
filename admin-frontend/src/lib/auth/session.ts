@@ -1,5 +1,6 @@
 import { decodeJwt, isJwtExpired, type JwtPayload } from "./jwt";
 import { clearAuthToken, getAuthToken } from "./token";
+import { clearActiveShopId } from "@/lib/shop-context";
 
 export const ADMIN_SESSION_EXPIRED_EVENT = "admin:session-expired";
 
@@ -9,18 +10,17 @@ type AdminSession = {
   payload: JwtPayload | null;
 };
 
-/** Đọc token local + kiểm tra JWT (role ADMIN, chưa hết hạn). Chỉ gọi phía client. */
+/** Đọc token local + kiểm tra JWT còn hạn. Seller access được BE quyết định. */
 export function readAdminSession(): AdminSession {
   const token = getAuthToken();
   const payload = token ? decodeJwt(token) : null;
-  const ok = Boolean(
-    token && payload && !isJwtExpired(payload) && payload.role === "ADMIN",
-  );
+  const ok = Boolean(token && payload && !isJwtExpired(payload));
   return { ok, token, payload };
 }
 
 export function clearAdminSession(): void {
   clearAuthToken();
+  clearActiveShopId();
 }
 
 export function notifySessionExpired(): void {

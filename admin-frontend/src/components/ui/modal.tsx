@@ -9,7 +9,6 @@ type ModalProps = HTMLAttributes<HTMLDivElement> & {
   children: ReactNode;
 };
 
-/** Lớp phủ modal — token `bg-overlay`; không dùng `bg-black/40` trên page. */
 export function Modal({ open, onClose, children, className, ...props }: ModalProps) {
   useEffect(() => {
     if (!open) return;
@@ -27,7 +26,7 @@ export function Modal({ open, onClose, children, className, ...props }: ModalPro
       role="dialog"
       aria-modal="true"
       className={cn(
-        "fixed inset-0 z-50 flex items-end justify-center bg-overlay p-3 md:items-center",
+        "fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-3 md:items-center",
         className,
       )}
       onClick={onClose}
