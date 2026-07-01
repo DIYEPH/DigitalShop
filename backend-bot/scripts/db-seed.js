@@ -49,7 +49,45 @@ async function upsertUser(client, user) {
   return result.rows[0].id;
 }
 
+async function getDefaultShopId(client) {
+  const result = await client.query(`SELECT id FROM shops WHERE slug = 'default' LIMIT 1`);
+  const id = result.rows[0]?.id;
+  if (!id) {
+    throw new Error('Default shop is missing. Run database migrations/init before seeding.');
+  }
+  return id;
+}
+
+async function syncUserShopBalance(client, userId) {
+  await client.query(
+    `INSERT INTO user_shop_balances (user_id, shop_id, balance_usdt, balance_vnd)
+     SELECT u.id, s.id, u.balance_usdt, u.balance_vnd
+     FROM users u
+     CROSS JOIN shops s
+     WHERE u.id = $1 AND s.slug = 'default'
+     ON CONFLICT (user_id, shop_id) DO UPDATE SET
+       balance_usdt = EXCLUDED.balance_usdt,
+       balance_vnd = EXCLUDED.balance_vnd,
+       updated_at = NOW()`,
+    [userId],
+  );
+}
+
+async function upsertShopMember(client, userId, role) {
+  await client.query(
+    `INSERT INTO shop_members (shop_id, user_id, role)
+     SELECT s.id, $1, $2::shop_member_role_enum
+     FROM shops s
+     WHERE s.slug = 'default'
+     ON CONFLICT (shop_id, user_id) DO UPDATE SET
+       role = EXCLUDED.role,
+       updated_at = NOW()`,
+    [userId, role],
+  );
+}
+
 async function seedCatalog(client) {
+  const shopId = await getDefaultShopId(client);
   const category = await client.query(
     `INSERT INTO categories (name_en, name_vi, slug, emoji_id, sort_order, description_en, description_vi)
       VALUES ('Software Accounts', 'Tai khoan phan mem', 'software-accounts', 'PC', 1, 'Digital software accounts', 'Tai khoan phan mem so')
@@ -62,10 +100,19 @@ async function seedCatalog(client) {
       RETURNING id`,
   );
 
+  await client.query(
+    `INSERT INTO shop_categories (shop_id, category_id)
+     VALUES ($1, $2)
+     ON CONFLICT (shop_id, category_id) DO UPDATE SET
+       is_active = TRUE,
+       updated_at = NOW()`,
+    [shopId, category.rows[0].id],
+  );
+
   const product = await client.query(
-    `INSERT INTO products (category_id, name_en, name_vi, description_en, description_vi, slug, emoji_id)
-      VALUES ($1, 'Canva Pro', 'Canva Pro', 'Canva Pro account', 'Tai khoan Canva Pro', 'canva-pro', 'ART')
-      ON CONFLICT (slug) DO UPDATE SET
+    `INSERT INTO products (shop_id, category_id, name_en, name_vi, description_en, description_vi, slug, emoji_id)
+      VALUES ($1, $2, 'Canva Pro', 'Canva Pro', 'Canva Pro account', 'Tai khoan Canva Pro', 'canva-pro', 'ART')
+      ON CONFLICT (shop_id, slug) DO UPDATE SET
         category_id = EXCLUDED.category_id,
         name_en = EXCLUDED.name_en,
         name_vi = EXCLUDED.name_vi,
@@ -73,7 +120,7 @@ async function seedCatalog(client) {
         description_vi = EXCLUDED.description_vi,
         updated_at = NOW()
       RETURNING id`,
-    [category.rows[0].id],
+    [shopId, category.rows[0].id],
   );
 
   const plan = await client.query(
@@ -149,13 +196,14 @@ async function seedStock(client, variantId) {
 }
 
 async function upsertCoupon(client, coupon) {
+  const shopId = await getDefaultShopId(client);
   const result = await client.query(
     `INSERT INTO coupons (
-        code, variant_id, is_active, visibility, requires_ownership, discount_type,
+        shop_id, code, variant_id, is_active, visibility, requires_ownership, discount_type,
         percent_bps, amount_usdt, amount_vnd, cost_point, max_redemptions, per_user_limit
       )
-      VALUES ($1, $2, TRUE, $3::coupon_visibility_enum, $4, $5::coupon_discount_type_enum, $6, $7, $8, $9, $10, $11)
-      ON CONFLICT (code) DO UPDATE SET
+      VALUES ($1, $2, $3, TRUE, $4::coupon_visibility_enum, $5, $6::coupon_discount_type_enum, $7, $8, $9, $10, $11, $12)
+      ON CONFLICT (shop_id, code) DO UPDATE SET
         variant_id = EXCLUDED.variant_id,
         is_active = TRUE,
         visibility = EXCLUDED.visibility,
@@ -170,6 +218,7 @@ async function upsertCoupon(client, coupon) {
         updated_at = NOW()
       RETURNING id`,
     [
+      shopId,
       coupon.code,
       coupon.variantId,
       coupon.visibility,
@@ -232,7 +281,7 @@ async function main() {
   await client.connect();
   try {
     await client.query('BEGIN');
-    await upsertUser(client, {
+    const adminId = await upsertUser(client, {
       email: 'admin@digitalshop.dev',
       telegramId: adminTelegramId,
       username: 'seed_admin',
@@ -245,6 +294,9 @@ async function main() {
       balancePoint: 0,
       referralCode: 'ADMINREF',
     });
+    await syncUserShopBalance(client, adminId);
+    await upsertShopMember(client, adminId, 'OWNER');
+
     const userId = await upsertUser(client, {
       email: 'user@digitalshop.dev',
       telegramId: userTelegramId,
@@ -258,6 +310,8 @@ async function main() {
       balancePoint: 100,
       referralCode: 'USERREF',
     });
+    await syncUserShopBalance(client, userId);
+
     const variantId = await seedCatalog(client);
     await seedStock(client, variantId);
     await seedCoupons(client, variantId, userId);

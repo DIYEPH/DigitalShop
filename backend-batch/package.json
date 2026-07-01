@@ -7,6 +7,8 @@
     "build": "tsc -p tsconfig.json",
     "clean:cancelled-orders": "ts-node src/main.ts",
     "clean:cancelled-orders:dry-run": "ts-node src/main.ts --dry-run",
+    "db:migrate": "cd ../database && npm run db:migrate",
+    "db:status": "cd ../database && npm run db:status",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [

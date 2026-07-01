@@ -16,6 +16,8 @@
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "node --require ./test/register-ts.js --require ts-node/register --test test/unit/jwt-expires.test.ts test/unit/pagination.util.test.ts test/unit/volume-tier.validator.test.ts test/unit/variant-prices.util.test.ts",
     "test:e2e": "node --require ./test/register-ts.js --require ts-node/register --test test/e2e/auth-api.test.ts test/e2e/products-api.test.ts test/e2e/orders-api.test.ts test/e2e/users-api.test.ts test/e2e/coupons-api.test.ts",
+    "db:migrate": "cd ../database && npm run db:migrate",
+    "db:status": "cd ../database && npm run db:status",
     "pre-commit": "npm run test && npm run build",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },

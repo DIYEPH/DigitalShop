@@ -1,0 +1,16 @@
+{
+  "name": "digitalshop-database",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Shared PostgreSQL schema and migrations for DigitalShop services",
+  "scripts": {
+    "db:init": "node scripts/db-init.js",
+    "db:reset": "node scripts/db-init.js --reset",
+    "db:migrate": "node scripts/db-migrate.js",
+    "db:status": "node scripts/db-migrate.js --status"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "pg": "^8.20.0"
+  }
+}

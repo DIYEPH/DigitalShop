@@ -10,6 +10,8 @@
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main.js",
     "typecheck": "tsc --noEmit",
+    "db:migrate": "cd ../database && npm run db:migrate",
+    "db:status": "cd ../database && npm run db:status",
     "test": "node --test"
   },
   "dependencies": {
