@@ -16,18 +16,26 @@ export function useOrders() {
     Record<string, string>
   >({});
   const [paymentCodeQuery, setPaymentCodeQuery] = useState("");
+  const [warrantyOnly, setWarrantyOnly] = useState(false);
   const [confirmOrder, setConfirmOrder] = useState<AdminOrder | null>(null);
   const [chatOrderId, setChatOrderId] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<AdminOrderMessage[]>([]);
   const [chatText, setChatText] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
 
-  const loadOrders = async (nextPaymentCode = paymentCodeQuery) => {
+  const loadOrders = async (
+    nextPaymentCode = paymentCodeQuery,
+    nextWarrantyOnly = warrantyOnly,
+  ) => {
     if (!token) return;
     setLoading(true);
     setError(null);
     try {
-      const r = await ordersService.list(token, nextPaymentCode.trim() || undefined);
+      const r = await ordersService.list(
+        token,
+        nextPaymentCode.trim() || undefined,
+        nextWarrantyOnly,
+      );
       setOrders(r.data.orders);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Không tải được đơn hàng.");
@@ -115,6 +123,7 @@ export function useOrders() {
     busyOrderId,
     deliveryNoteById,
     paymentCodeQuery,
+    warrantyOnly,
     confirmOrder,
     chatOrderId,
     chatMessages,
@@ -123,6 +132,7 @@ export function useOrders() {
     // setters
     setDeliveryNoteById,
     setPaymentCodeQuery,
+    setWarrantyOnly,
     setConfirmOrder,
     setChatOrderId,
     setChatText,

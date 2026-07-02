@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseIntPipe,
   ParseUUIDPipe,
   Post,
   Query,
@@ -20,6 +21,7 @@ import { ConfirmOrderDto } from "./dto/confirm-order.dto";
 import { CreateOrderMessageDto } from "./dto/create-order-message.dto";
 import { DeliverOrderDto } from "./dto/deliver-order.dto";
 import { OrderQueryDto } from "./dto/order-query.dto";
+import { ResolveWarrantyDto } from "./dto/resolve-warranty.dto";
 import { OrdersService } from "./orders.service";
 
 type AdminRequest = Request & { user?: { id: number } };
@@ -87,5 +89,36 @@ export class OrdersController {
       });
     }
     return this.ordersService.addMessage(shopId, id, dto, adminId);
+  }
+
+  @Get(":id/warranty-requests")
+  @ApiOperation({ summary: "List warranty requests for an order" })
+  listWarranty(
+    @CurrentShop("id") shopId: string,
+    @Param("id", ParseUUIDPipe) id: string,
+  ) {
+    return this.ordersService.listWarrantyRequests(shopId, id);
+  }
+
+  @Post(":id/warranty-requests/:requestId/resolve")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Resolve a warranty request (REPLACED / REFUNDED / REJECTED)",
+  })
+  resolveWarranty(
+    @CurrentShop("id") shopId: string,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Param("requestId", ParseIntPipe) requestId: number,
+    @Body() dto: ResolveWarrantyDto,
+    @Req() req: AdminRequest,
+  ) {
+    const adminId = req.user?.id;
+    if (!adminId) {
+      throw new BadRequestException({
+        code: ErrorCodes.AUTH_INVALID_TOKEN,
+        message: "Admin context missing",
+      });
+    }
+    return this.ordersService.resolveWarranty(shopId, id, requestId, dto, adminId);
   }
 }

@@ -13,6 +13,7 @@ CREATE TYPE coupon_visibility_enum AS ENUM ('PUBLIC', 'PRIVATE');
 CREATE TYPE fulfillment_type_enum AS ENUM ('IN_STOCK', 'PREORDER');
 CREATE TYPE order_message_kind_enum AS ENUM ('TEXT', 'WARRANTY_REQUEST', 'SYSTEM');
 CREATE TYPE order_sender_role_enum AS ENUM ('USER', 'ADMIN');
+CREATE TYPE warranty_request_status_enum AS ENUM ('OPEN', 'REPLACED', 'REFUNDED', 'REJECTED');
 CREATE TYPE idempotency_status_enum AS ENUM ('PENDING', 'SUCCEEDED', 'FAILED');
 CREATE TYPE point_tx_type_enum AS ENUM ('EARN', 'SPEND');
 CREATE TYPE payment_status_enum AS ENUM ('PENDING', 'CONFIRMED', 'FAILED');
@@ -21,7 +22,9 @@ CREATE TYPE currency_enum AS ENUM ('USDT', 'VND');
 CREATE TYPE language_enum AS ENUM ('EN', 'VI', 'RU', 'ZH');
 CREATE TYPE user_status_enum AS ENUM ('ACTIVE', 'BANNED');
 CREATE TYPE shop_status_enum AS ENUM ('ACTIVE', 'SUSPENDED', 'ARCHIVED');
-CREATE TYPE shop_member_role_enum AS ENUM ('OWNER', 'MANAGER', 'STAFF');
+-- OWNER/MANAGER/STAFF run the shop; CUSTOMER is a buyer attached to the shop
+-- (auto-created on first purchase, can be banned per shop via status).
+CREATE TYPE shop_member_role_enum AS ENUM ('OWNER', 'MANAGER', 'STAFF', 'CUSTOMER');
 CREATE TYPE shop_payment_provider_enum AS ENUM ('BINANCE', 'BANK', 'SEPAY', 'CRYPTO');
 CREATE TYPE shop_payment_credential_status_enum AS ENUM ('ACTIVE', 'DISABLED');
 -- ---------------------------------------------------------------------------
@@ -115,11 +118,13 @@ CREATE TABLE shop_members (
   shop_id UUID NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
   user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   role shop_member_role_enum NOT NULL,
+  status user_status_enum NOT NULL DEFAULT 'ACTIVE',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (shop_id, user_id)
 );
 CREATE INDEX idx_shop_members_user_id ON shop_members(user_id);
+CREATE INDEX idx_shop_members_shop_role ON shop_members(shop_id, role);
 
 -- ---------------------------------------------------------------------------
 -- Shared category tree
@@ -376,6 +381,27 @@ CREATE TABLE order_messages (
 );
 CREATE INDEX idx_order_messages_order_id ON order_messages(order_id);
 CREATE INDEX idx_order_messages_shop_id ON order_messages(shop_id);
+
+-- Buyer-initiated warranty claims. Seller resolves each claim either by replacing
+-- the faulty item (a new DELIVERED stock row is attached to the order) or by
+-- refunding manually (system only records the decision + usage days for reference).
+CREATE TABLE warranty_requests (
+  id SERIAL PRIMARY KEY,
+  shop_id UUID NOT NULL DEFAULT digitalshop_default_shop_id() REFERENCES shops(id),
+  order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  order_item_id INT NULL REFERENCES order_items(id) ON DELETE SET NULL,
+  user_id INT NOT NULL REFERENCES users(id),
+  reason TEXT NOT NULL,
+  days_used INT NULL,
+  status warranty_request_status_enum NOT NULL DEFAULT 'OPEN',
+  resolution_note TEXT NULL,
+  resolved_by INT NULL REFERENCES users(id) ON DELETE SET NULL,
+  resolved_at TIMESTAMPTZ NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_warranty_requests_shop_status ON warranty_requests(shop_id, status);
+CREATE INDEX idx_warranty_requests_order_id ON warranty_requests(order_id);
 
 -- ---------------------------------------------------------------------------
 -- Stock

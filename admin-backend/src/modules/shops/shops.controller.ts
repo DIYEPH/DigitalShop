@@ -9,6 +9,8 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Put,
+  Query,
 } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { AdminOnly } from "../../common/decorators/admin-only.decorator";
@@ -20,7 +22,9 @@ import { CurrentShop } from "../tenant/types/current-shop";
 import {
   AddShopMemberDto,
   CreateShopDto,
+  CustomerQueryDto,
   SelectShopCategoriesDto,
+  SetCustomerStatusDto,
   UpdateShopDto,
 } from "./dto/create-shop.dto";
 import { ShopsService } from "./shops.service";
@@ -87,6 +91,30 @@ export class ShopsController {
     @Param("userId", ParseIntPipe) userId: number,
   ) {
     return this.shopsService.removeMember(currentShop, shopId, userId);
+  }
+
+  @Get(":shopId/customers")
+  @ShopScoped()
+  @ApiOperation({ summary: "List shop customers (buyers)" })
+  listCustomers(
+    @CurrentShopDecorator() currentShop: CurrentShop,
+    @Param("shopId") shopId: string,
+    @Query() query: CustomerQueryDto,
+  ) {
+    return this.shopsService.listCustomers(currentShop, shopId, query);
+  }
+
+  @Put(":shopId/customers/:userId/status")
+  @ShopScoped()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Block or unblock a customer of this shop" })
+  setCustomerStatus(
+    @CurrentShopDecorator() currentShop: CurrentShop,
+    @Param("shopId") shopId: string,
+    @Param("userId", ParseIntPipe) userId: number,
+    @Body() dto: SetCustomerStatusDto,
+  ) {
+    return this.shopsService.setCustomerStatus(currentShop, shopId, userId, dto.status);
   }
 
   @Get(":shopId/categories")

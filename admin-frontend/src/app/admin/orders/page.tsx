@@ -30,8 +30,10 @@ export default function AdminOrdersPage() {
     chatMessages,
     chatText,
     chatLoading,
+    warrantyOnly,
     setDeliveryNoteById,
     setPaymentCodeQuery,
+    setWarrantyOnly,
     setConfirmOrder,
     setChatOrderId,
     setChatText,
@@ -58,11 +60,24 @@ export default function AdminOrdersPage() {
       <>
         <div className="rounded-brutal border-3 border-brutal bg-brutal-bg p-3 shadow-brutal-sm">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-xs font-semibold text-gray-600">
-              {loading ? "Đang tải…" : `${orders.length} đơn`}
+            <div className="flex items-center gap-2 text-xs font-semibold text-gray-600">
+              <span>{loading ? "Đang tải…" : `${orders.length} đơn`}</span>
+              <Button
+                size="sm"
+                type="button"
+                variant={warrantyOnly ? "primary" : "ghost"}
+                disabled={loading}
+                onClick={() => {
+                  const next = !warrantyOnly;
+                  setWarrantyOnly(next);
+                  void loadOrders(paymentCodeQuery, next);
+                }}
+              >
+                Có yêu cầu bảo hành
+              </Button>
             </div>
             <form
-              className="flex items-center gap-1.5"
+              className="flex w-full flex-wrap items-center gap-1.5 sm:w-auto"
               onSubmit={(e) => {
                 e.preventDefault();
                 void loadOrders();
@@ -70,7 +85,7 @@ export default function AdminOrdersPage() {
             >
               <Input
                 size="sm"
-                className="w-56"
+                className="w-full min-w-0 flex-1 sm:w-56 sm:flex-none"
                 placeholder="Lọc payment_code"
                 value={paymentCodeQuery}
                 onChange={(e) => setPaymentCodeQuery(e.target.value)}
@@ -82,10 +97,11 @@ export default function AdminOrdersPage() {
                 size="sm"
                 type="button"
                 variant="ghost"
-                disabled={loading || !paymentCodeQuery}
+                disabled={loading || (!paymentCodeQuery && !warrantyOnly)}
                 onClick={() => {
                   setPaymentCodeQuery("");
-                  void loadOrders("");
+                  setWarrantyOnly(false);
+                  void loadOrders("", false);
                 }}
               >
                 Xóa lọc
@@ -127,9 +143,16 @@ export default function AdminOrdersPage() {
                   {o.total_price} {o.currency}
                 </td>
                 <td className="px-3 py-2">
-                  <Badge variant={orderStatusVariant(o.status)}>
-                    {o.status}
-                  </Badge>
+                  <div className="flex flex-wrap items-center gap-1">
+                    <Badge variant={orderStatusVariant(o.status)}>
+                      {o.status}
+                    </Badge>
+                    {o.open_warranty_count ? (
+                      <Badge variant="danger" size="sm">
+                        BH {o.open_warranty_count}
+                      </Badge>
+                    ) : null}
+                  </div>
                 </td>
                 <td className="px-3 py-2 text-gray-600">
                   <div className="text-[10px]">

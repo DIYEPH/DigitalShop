@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
@@ -24,6 +25,7 @@ import {
   StorefrontPaymentMethod,
   WalletNetwork,
   WarrantyInfo,
+  WarrantyRequestInfo,
 } from './types/orders.types';
 import {
   allowedDbPaymentMethods,
@@ -42,6 +44,7 @@ import {
 type VariantRow = {
   id: number;
   product_id: number;
+  shop_id: string;
   product_name_en: string;
   product_name_vi: string;
   name_en: string;
@@ -300,6 +303,15 @@ export class OrdersService {
       if (!expiresAt || Date.now() >= new Date(expiresAt).getTime()) {
         throw new BadRequestException('This item is out of warranty');
       }
+      const open = await this.pool.query<{ id: number }>(
+        `SELECT id FROM warranty_requests
+         WHERE order_id = $1::uuid AND order_item_id = $2 AND status = 'OPEN'
+         LIMIT 1`,
+        [orderId, orderItemId],
+      );
+      if (open.rows[0]) {
+        throw new BadRequestException('A warranty request for this item is still open');
+      }
     }
 
     const inserted = await this.pool.query<OrderMessageRow>(
@@ -311,6 +323,19 @@ export class OrdersService {
                  sender_role::text AS sender_role, kind::text AS kind, message, created_at`,
       [order.shop_id, orderId, orderItemId, userId, kind, dto.message.trim()],
     );
+
+    if (kind === 'WARRANTY_REQUEST') {
+      const start = order.delivered_at ?? order.paid_at ?? null;
+      const daysUsed = start
+        ? Math.max(0, Math.floor((Date.now() - new Date(start).getTime()) / 86_400_000))
+        : null;
+      await this.pool.query(
+        `INSERT INTO warranty_requests (shop_id, order_id, order_item_id, user_id, reason, days_used)
+         VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6)`,
+        [order.shop_id, orderId, orderItemId, userId, dto.message.trim(), daysUsed],
+      );
+    }
+
     const row = inserted.rows[0];
     return { ...row, created_at: toIso(row.created_at) };
   }
@@ -417,7 +442,8 @@ export class OrdersService {
 
   private async loadVariants(variantIds: number[]): Promise<Map<number, VariantRow>> {
     const result = await this.pool.query<VariantRow>(
-      `SELECT v.id, v.product_id, p.name_en AS product_name_en, p.name_vi AS product_name_vi,
+      `SELECT v.id, v.product_id, p.shop_id::text AS shop_id,
+              p.name_en AS product_name_en, p.name_vi AS product_name_vi,
               v.name_en, v.name_vi, v.fulfillment_type::text AS fulfillment_type,
               v.preorder_limit, v.warranty_type::text AS warranty_type,
               v.warranty_value, v.warranty_unit::text AS warranty_unit,
@@ -519,11 +545,18 @@ export class OrdersService {
     lines: QuoteLine[],
     totalPrice: number,
   ): Promise<OrderRow> {
+    const shopIds = Array.from(new Set(lines.map((line) => line.variant.shop_id)));
+    if (shopIds.length !== 1) {
+      throw new BadRequestException('All items in an order must belong to the same shop');
+    }
+    const shopId = shopIds[0];
+
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
 
       await this.assertActiveUserForUpdate(client, userId);
+      await this.assertCustomerNotBanned(client, shopId, userId);
       await this.assertNoActivePendingOrderForUpdate(client, userId);
 
       await this.lockVariantsForUpdate(client, lines.map((line) => line.variant.id));
@@ -532,7 +565,8 @@ export class OrdersService {
         await this.assertVariantAvailabilityForUpdate(client, line.variant, line.quantity);
       }
 
-      const order = await this.insertOrder(client, userId, dbPaymentMethod, totalPrice);
+      const order = await this.insertOrder(client, userId, shopId, dbPaymentMethod, totalPrice);
+      await this.upsertShopCustomer(client, shopId, userId);
 
       for (const line of lines) {
         await client.query(
@@ -632,6 +666,7 @@ export class OrdersService {
   private async insertOrder(
     client: PoolClient,
     userId: number,
+    shopId: string,
     paymentMethod: DbPaymentMethod,
     totalPrice: number,
   ): Promise<OrderRow> {
@@ -639,11 +674,11 @@ export class OrdersService {
       const paymentCode = paymentMethod === 'BINANCE' ? generatePaymentCode() : null;
       try {
         const result = await client.query<OrderRow>(
-          `INSERT INTO orders (user_id, payment_code, total_price, currency, payment_method, coupon_id, status)
-           VALUES ($1, $2, $3, 'USDT'::currency_enum, $4::product_payment_method_enum, NULL, 'PENDING')
+          `INSERT INTO orders (shop_id, user_id, payment_code, total_price, currency, payment_method, coupon_id, status)
+           VALUES ($1::uuid, $2, $3, $4, 'USDT'::currency_enum, $5::product_payment_method_enum, NULL, 'PENDING')
            RETURNING id::text, shop_id::text, total_price, currency::text, payment_method::text, payment_code,
                      status::text AS status, delivery_note, created_at, updated_at`,
-          [userId, paymentCode, totalPrice, paymentMethod],
+          [shopId, userId, paymentCode, totalPrice, paymentMethod],
         );
         return result.rows[0];
       } catch (error) {
@@ -652,6 +687,38 @@ export class OrdersService {
       }
     }
     throw new ConflictException('Could not generate unique payment code');
+  }
+
+  /** First purchase attaches the buyer to the shop as a CUSTOMER member. */
+  private async upsertShopCustomer(
+    client: PoolClient,
+    shopId: string,
+    userId: number,
+  ): Promise<void> {
+    await client.query(
+      `INSERT INTO shop_members (shop_id, user_id, role)
+       VALUES ($1::uuid, $2, 'CUSTOMER'::shop_member_role_enum)
+       ON CONFLICT (shop_id, user_id) DO NOTHING`,
+      [shopId, userId],
+    );
+  }
+
+  /** A shop can ban its own customers without affecting other shops. */
+  private async assertCustomerNotBanned(
+    client: PoolClient,
+    shopId: string,
+    userId: number,
+  ): Promise<void> {
+    const result = await client.query<{ status: string }>(
+      `SELECT status::text AS status
+       FROM shop_members
+       WHERE shop_id = $1::uuid AND user_id = $2
+       LIMIT 1`,
+      [shopId, userId],
+    );
+    if (result.rows[0]?.status === 'BANNED') {
+      throw new ForbiddenException('You are blocked from purchasing in this shop');
+    }
   }
 
   private async reserveStock(client: PoolClient, orderId: string, variantId: number, quantity: number): Promise<void> {
@@ -822,6 +889,7 @@ export class OrdersService {
     );
 
     const isFulfilled = status === 'PAID' || status === 'DELIVERED';
+    const requests = await this.loadWarrantyRequests(orderId);
 
     return result.rows.map((row) => {
       const warrantyExpiresAt = isFulfilled
@@ -832,8 +900,11 @@ export class OrdersService {
             warrantyStart,
           )
         : null;
+      const request = requests.get(row.order_item_id) ?? null;
       const canRequestWarranty =
-        warrantyExpiresAt !== null && Date.now() < new Date(warrantyExpiresAt).getTime();
+        warrantyExpiresAt !== null &&
+        Date.now() < new Date(warrantyExpiresAt).getTime() &&
+        request?.status !== 'OPEN';
 
       return {
         order_item_id: row.order_item_id,
@@ -852,9 +923,54 @@ export class OrdersService {
           warranty_type: (row.snapshot_warranty_type as WarrantyInfo['warranty_type']) ?? 'NONE',
           warranty_expires_at: warrantyExpiresAt,
           can_request_warranty: canRequestWarranty,
+          request,
         },
       };
     });
+  }
+
+  /**
+   * Latest warranty request per order item, keyed by order_item_id. Guarded by
+   * table existence so storefronts on an un-migrated DB still return order details.
+   */
+  private async loadWarrantyRequests(
+    orderId: string,
+  ): Promise<Map<number, WarrantyRequestInfo>> {
+    const map = new Map<number, WarrantyRequestInfo>();
+    if (!(await this.hasWarrantyRequestsTable())) return map;
+
+    const result = await this.pool.query<{
+      order_item_id: number | null;
+      status: string;
+      days_used: number | null;
+      resolution_note: string | null;
+      created_at: Date;
+    }>(
+      `SELECT DISTINCT ON (order_item_id)
+              order_item_id, status::text AS status, days_used, resolution_note, created_at
+       FROM warranty_requests
+       WHERE order_id = $1::uuid
+       ORDER BY order_item_id, id DESC`,
+      [orderId],
+    );
+
+    for (const row of result.rows) {
+      if (row.order_item_id == null) continue;
+      map.set(row.order_item_id, {
+        status: row.status as WarrantyRequestInfo['status'],
+        days_used: row.days_used,
+        resolution_note: row.resolution_note,
+        created_at: toIso(row.created_at),
+      });
+    }
+    return map;
+  }
+
+  private async hasWarrantyRequestsTable(): Promise<boolean> {
+    const res = await this.pool.query<{ reg: string | null }>(
+      `SELECT to_regclass('public.warranty_requests')::text AS reg`,
+    );
+    return Boolean(res.rows[0]?.reg);
   }
 
   private parseItems(value: unknown): OrderItemJson[] {

@@ -24,6 +24,7 @@ export type TranslationKey =
   | "nav.products"
   | "nav.orders"
   | "nav.coupons"
+  | "nav.customers"
   | "nav.settings"
   | "shell.title"
   | "shell.selectShop"

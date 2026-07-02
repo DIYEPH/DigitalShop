@@ -48,7 +48,7 @@ export class ShopsService {
           s.updated_at
        FROM shop_members sm
        INNER JOIN shops s ON s.id = sm.shop_id
-       WHERE sm.user_id = $1
+       WHERE sm.user_id = $1 AND sm.role <> 'CUSTOMER'
        ORDER BY s.created_at ASC`,
       [userId],
     );
@@ -152,7 +152,7 @@ export class ShopsService {
           sm.created_at
        FROM shop_members sm
        INNER JOIN users u ON u.id = sm.user_id
-       WHERE sm.shop_id = $1::uuid
+       WHERE sm.shop_id = $1::uuid AND sm.role <> 'CUSTOMER'
        ORDER BY sm.created_at ASC`,
       [shopId],
     );
@@ -199,10 +199,123 @@ export class ShopsService {
       `DELETE FROM shop_members
        WHERE shop_id = $1::uuid
          AND user_id = $2
-         AND role <> 'OWNER'`,
+         AND role NOT IN ('OWNER', 'CUSTOMER')`,
       [shopId, userId],
     );
     return this.listMembers(currentShop, shopId);
+  }
+
+  async listCustomers(
+    currentShop: CurrentShop,
+    shopId: string,
+    query: { page?: number; limit?: number; search?: string },
+  ) {
+    this.assertCurrentShop(currentShop, shopId);
+
+    const page = Math.max(1, query.page ?? 1);
+    const limit = Math.min(100, Math.max(1, query.limit ?? 20));
+    const offset = (page - 1) * limit;
+
+    const params: unknown[] = [shopId];
+    const conditions = [`sm.shop_id = $1::uuid`, `sm.role = 'CUSTOMER'`];
+    if (query.search?.trim()) {
+      params.push(`%${query.search.trim()}%`);
+      conditions.push(
+        `(u.email ILIKE $${params.length} OR u.username ILIKE $${params.length} OR u.full_name ILIKE $${params.length})`,
+      );
+    }
+    const where = `WHERE ${conditions.join(" AND ")}`;
+
+    const countRes = await this.pool.query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count
+       FROM shop_members sm
+       INNER JOIN users u ON u.id = sm.user_id
+       ${where}`,
+      params,
+    );
+    const total = Number(countRes.rows[0]?.count ?? 0);
+
+    const listParams = [...params, limit, offset];
+    const result = await this.pool.query<{
+      user_id: number;
+      email: string | null;
+      username: string | null;
+      full_name: string | null;
+      telegram_id: string | null;
+      status: string;
+      order_count: string;
+      total_spent: string;
+      first_seen_at: Date;
+    }>(
+      `SELECT
+          sm.user_id,
+          u.email,
+          u.username,
+          u.full_name,
+          u.telegram_id::text AS telegram_id,
+          sm.status::text AS status,
+          COALESCE(os.order_count, 0)::text AS order_count,
+          COALESCE(os.total_spent, 0)::text AS total_spent,
+          sm.created_at AS first_seen_at
+       FROM shop_members sm
+       INNER JOIN users u ON u.id = sm.user_id
+       LEFT JOIN LATERAL (
+         SELECT COUNT(*) AS order_count,
+                COALESCE(SUM(o.total_price) FILTER (WHERE o.status IN ('PAID', 'DELIVERED')), 0) AS total_spent
+         FROM orders o
+         WHERE o.shop_id = sm.shop_id AND o.user_id = sm.user_id
+       ) os ON TRUE
+       ${where}
+       ORDER BY sm.created_at DESC
+       LIMIT $${listParams.length - 1} OFFSET $${listParams.length}`,
+      listParams,
+    );
+
+    return {
+      customers: result.rows.map((row) => ({
+        user_id: row.user_id,
+        email: row.email,
+        username: row.username,
+        full_name: row.full_name,
+        telegram_id: row.telegram_id,
+        status: row.status,
+        order_count: Number(row.order_count),
+        total_spent: Number(row.total_spent),
+        first_seen_at: row.first_seen_at.toISOString(),
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      },
+    };
+  }
+
+  async setCustomerStatus(
+    currentShop: CurrentShop,
+    shopId: string,
+    userId: number,
+    status: "ACTIVE" | "BANNED",
+  ) {
+    this.assertCurrentShop(currentShop, shopId);
+    this.assertManager(currentShop);
+
+    const result = await this.pool.query<{ user_id: number; status: string }>(
+      `UPDATE shop_members
+       SET status = $3::user_status_enum, updated_at = NOW()
+       WHERE shop_id = $1::uuid AND user_id = $2 AND role = 'CUSTOMER'
+       RETURNING user_id, status::text AS status`,
+      [shopId, userId, status],
+    );
+    const row = result.rows[0];
+    if (!row) {
+      throw new NotFoundException({
+        code: ErrorCodes.USER_NOT_FOUND,
+        message: "Customer not found in this shop",
+      });
+    }
+    return { user_id: row.user_id, status: row.status };
   }
 
   async listCategories(currentShop: CurrentShop, shopId: string) {

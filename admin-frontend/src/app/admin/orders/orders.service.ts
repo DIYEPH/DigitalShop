@@ -7,8 +7,13 @@ import {
 } from "@/lib/api/admin";
 
 export const ordersService = {
-  list: (token: string, payment_code?: string) =>
-    adminListOrders(token, { page: 1, limit: 50, payment_code }),
+  list: (token: string, payment_code?: string, warrantyOnly?: boolean) =>
+    adminListOrders(token, {
+      page: 1,
+      limit: 50,
+      payment_code,
+      warranty: warrantyOnly ? "open" : undefined,
+    }),
   confirm: (token: string, orderId: string) =>
     adminConfirmOrder(token, orderId),
   deliver: (token: string, orderId: string, note?: string) =>

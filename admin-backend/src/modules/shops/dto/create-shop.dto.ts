@@ -72,3 +72,30 @@ export class SelectShopCategoriesDto {
   @IsInt({ each: true })
   category_ids!: number[];
 }
+
+export class CustomerQueryDto {
+  @ApiPropertyOptional({ default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  page?: number;
+
+  @ApiPropertyOptional({ default: 20 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  limit?: number;
+
+  @ApiPropertyOptional({ description: "Tìm theo email / username / tên" })
+  @IsOptional()
+  @IsString()
+  @Length(1, 120)
+  search?: string;
+}
+
+export class SetCustomerStatusDto {
+  @ApiProperty({ enum: ["ACTIVE", "BANNED"] })
+  @IsString()
+  @Matches(/^(ACTIVE|BANNED)$/)
+  status!: "ACTIVE" | "BANNED";
+}

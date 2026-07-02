@@ -9,7 +9,10 @@ import type {
   AdminOrderDetail,
   AdminOrderMessage,
   AdminStockItem,
+  AdminWarrantyRequest,
 } from "./order-detail.types";
+
+export type WarrantyResolution = "REPLACED" | "REFUNDED" | "REJECTED";
 
 function errMessage(e: unknown, fallback: string) {
   return e instanceof ApiError ? e.message : fallback;
@@ -23,6 +26,11 @@ export function useOrderDetail() {
   const [order, setOrder] = useState<AdminOrderDetail | null>(null);
   const [slots, setSlots] = useState<AdminStockItem[]>([]);
   const [messages, setMessages] = useState<AdminOrderMessage[]>([]);
+  const [warrantyRequests, setWarrantyRequests] = useState<AdminWarrantyRequest[]>([]);
+
+  const [warrantyPayloads, setWarrantyPayloads] = useState<Record<number, string>>({});
+  const [warrantyNotes, setWarrantyNotes] = useState<Record<number, string>>({});
+  const [resolvingWarrantyId, setResolvingWarrantyId] = useState<number | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,12 +57,14 @@ export function useOrderDetail() {
         const data = await orderDetailService.get(token, orderId);
         setOrder(data);
 
-        const [slotRes, msgRes] = await Promise.all([
+        const [slotRes, msgRes, warRes] = await Promise.all([
           orderDetailService.listSlots(token, orderId).catch(() => ({ items: [] })),
           orderDetailService.listMessages(token, orderId).catch(() => ({ messages: [] })),
+          orderDetailService.listWarranty(token, orderId).catch(() => ({ requests: [] })),
         ]);
         setSlots(slotRes.items);
         setMessages(msgRes.messages);
+        setWarrantyRequests(warRes.requests);
         setDrafts((prev) => {
           const next: Record<number, string> = {};
           for (const s of slotRes.items) {
@@ -154,6 +164,57 @@ export function useOrderDetail() {
     }
   }, [token, order, newMessage, load]);
 
+  const setWarrantyPayload = useCallback((requestId: number, value: string) => {
+    setWarrantyPayloads((prev) => ({ ...prev, [requestId]: value }));
+  }, []);
+
+  const setWarrantyNote = useCallback((requestId: number, value: string) => {
+    setWarrantyNotes((prev) => ({ ...prev, [requestId]: value }));
+  }, []);
+
+  const resolveWarranty = useCallback(
+    async (requestId: number, resolution: WarrantyResolution) => {
+      if (!token || !order) return;
+      const payload = (warrantyPayloads[requestId] ?? "").trim();
+      const note = (warrantyNotes[requestId] ?? "").trim();
+
+      if (resolution === "REPLACED" && !payload) {
+        setActionError("Nhập payload (tài khoản/key) thay thế trước khi xác nhận bảo hành.");
+        return;
+      }
+      if (resolution === "REJECTED" && !note) {
+        setActionError("Nhập lý do từ chối để gửi cho khách.");
+        return;
+      }
+
+      setResolvingWarrantyId(requestId);
+      setActionError(null);
+      setActionMsg(null);
+      try {
+        await orderDetailService.resolveWarranty(token, order.id, requestId, {
+          resolution,
+          payload: resolution === "REPLACED" ? payload : undefined,
+          note: note || undefined,
+        });
+        setActionMsg(
+          resolution === "REPLACED"
+            ? "Đã bổ sung hàng bảo hành và đánh dấu đã xử lý."
+            : resolution === "REFUNDED"
+              ? "Đã đánh dấu hoàn tiền cho yêu cầu bảo hành."
+              : "Đã từ chối yêu cầu bảo hành.",
+        );
+        setWarrantyPayloads((prev) => ({ ...prev, [requestId]: "" }));
+        setWarrantyNotes((prev) => ({ ...prev, [requestId]: "" }));
+        await load({ silent: true });
+      } catch (e) {
+        setActionError(errMessage(e, "Không xử lý được yêu cầu bảo hành."));
+      } finally {
+        setResolvingWarrantyId(null);
+      }
+    },
+    [token, order, warrantyPayloads, warrantyNotes, load],
+  );
+
   const reservedSlots = useMemo(
     () => slots.filter((s) => s.status === "RESERVED"),
     [slots],
@@ -206,6 +267,13 @@ export function useOrderDetail() {
     setDeliveryNote,
     newMessage,
     setNewMessage,
+    warrantyRequests,
+    warrantyPayloads,
+    setWarrantyPayload,
+    warrantyNotes,
+    setWarrantyNote,
+    resolvingWarrantyId,
+    resolveWarranty,
     isPending,
     isPaid,
     canDeliver,

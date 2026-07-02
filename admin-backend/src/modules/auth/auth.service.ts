@@ -156,7 +156,7 @@ export class AuthService {
           sm.role::text AS member_role
        FROM shop_members sm
        INNER JOIN shops s ON s.id = sm.shop_id
-       WHERE sm.user_id = $1
+       WHERE sm.user_id = $1 AND sm.role <> 'CUSTOMER'
        ORDER BY s.created_at ASC`,
       [userId],
     );
@@ -182,7 +182,7 @@ export class AuthService {
     if (canCreateShop) return true;
     const result = await this.pool.query<{ exists: boolean }>(
       `SELECT EXISTS (
-         SELECT 1 FROM shop_members WHERE user_id = $1
+         SELECT 1 FROM shop_members WHERE user_id = $1 AND role <> 'CUSTOMER'
        ) AS exists`,
       [userId],
     );

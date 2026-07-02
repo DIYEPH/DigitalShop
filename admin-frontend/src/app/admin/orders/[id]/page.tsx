@@ -48,6 +48,13 @@ export default function AdminOrderDetailPage() {
     setDeliveryNote,
     newMessage,
     setNewMessage,
+    warrantyRequests,
+    warrantyPayloads,
+    setWarrantyPayload,
+    warrantyNotes,
+    setWarrantyNote,
+    resolvingWarrantyId,
+    resolveWarranty,
     isPending,
     isPaid,
     canDeliver,
@@ -55,6 +62,21 @@ export default function AdminOrderDetailPage() {
     filledCount,
     unfilledCount,
   } = useOrderDetail();
+
+  const warrantyStatusVariant = (status: string) =>
+    status === "OPEN"
+      ? "accent"
+      : status === "REJECTED"
+        ? "danger"
+        : "success";
+  const warrantyStatusLabel = (status: string) =>
+    status === "OPEN"
+      ? "Đang chờ"
+      : status === "REPLACED"
+        ? "Đã bảo hành"
+        : status === "REFUNDED"
+          ? "Đã hoàn tiền"
+          : "Đã từ chối";
 
   return (
     <div className="grid gap-4">
@@ -105,12 +127,12 @@ export default function AdminOrderDetailPage() {
                       phòng khi auto-verify chưa chạy hoặc lỗi.
                     </p>
                     <div className="flex flex-wrap items-end gap-3">
-                      <div className="grid gap-1">
+                      <div className="grid w-full gap-1 sm:w-auto">
                         <label className="text-xs font-semibold text-gray-600">
                           Mã giao dịch / txid (tuỳ chọn)
                         </label>
                         <Input
-                          className="w-72"
+                          className="w-full sm:w-72"
                           placeholder="transaction_hash / tx_id"
                           value={txHash}
                           onChange={(e) => setTxHash(e.target.value)}
@@ -145,12 +167,12 @@ export default function AdminOrderDetailPage() {
                       )}
                     </div>
                     <div className="flex flex-wrap items-end gap-3">
-                      <div className="grid gap-1">
+                      <div className="grid w-full gap-1 sm:w-auto">
                         <label className="text-xs font-semibold text-gray-600">
                           Ghi chú giao hàng (tuỳ chọn)
                         </label>
                         <Input
-                          className="w-72"
+                          className="w-full sm:w-72"
                           placeholder="delivery_note"
                           value={deliveryNote}
                           onChange={(e) => setDeliveryNote(e.target.value)}
@@ -426,6 +448,127 @@ export default function AdminOrderDetailPage() {
                       </pre>
                     </div>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {warrantyRequests.length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Yêu cầu bảo hành ({warrantyRequests.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-3">
+                  {warrantyRequests.map((req) => {
+                    const open = req.status === "OPEN";
+                    const resolving = resolvingWarrantyId === req.id;
+                    return (
+                      <div
+                        key={req.id}
+                        className="grid gap-3 rounded-brutal border-3 border-brutal bg-brutal-bg p-3 shadow-brutal-sm"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex flex-wrap items-center gap-2 text-xs">
+                            <Badge variant={warrantyStatusVariant(req.status)} size="sm">
+                              {warrantyStatusLabel(req.status)}
+                            </Badge>
+                            <span className="font-semibold text-brutal-fg">
+                              {req.snapshot_variant_name ?? `item #${req.order_item_id ?? "—"}`}
+                            </span>
+                            <span className="text-gray-600">
+                              variant {req.variant_id ?? "—"}
+                            </span>
+                          </div>
+                          <span className="text-xs text-gray-600">
+                            {formatDate(req.created_at)}
+                          </span>
+                        </div>
+
+                        <div className="text-xs text-gray-600">
+                          Đã dùng:{" "}
+                          <span className="font-semibold text-brutal-fg">
+                            {req.days_used ?? "—"} ngày
+                          </span>
+                          {req.warranty_type ? ` · ${req.warranty_type}` : ""}
+                        </div>
+
+                        <div className="rounded-brutal border-3 border-dashed border-brutal bg-brutal-muted p-2 text-sm text-brutal-fg">
+                          <span className="text-xs font-semibold text-gray-600">
+                            Lý do:{" "}
+                          </span>
+                          <span className="whitespace-pre-wrap">{req.reason}</span>
+                        </div>
+
+                        {open ? (
+                          <div className="grid gap-3">
+                            <div className="grid gap-2 rounded-brutal border-3 border-brutal bg-brutal-bg p-3">
+                              <label className="text-xs font-semibold text-gray-600">
+                                Bảo hành đổi hàng — nhập tài khoản/key thay thế
+                              </label>
+                              <Textarea
+                                size="sm"
+                                className="min-h-[64px] font-mono"
+                                placeholder="Payload thay thế giao cho khách…"
+                                value={warrantyPayloads[req.id] ?? ""}
+                                onChange={(e) =>
+                                  setWarrantyPayload(req.id, e.target.value)
+                                }
+                              />
+                              <div className="flex justify-end">
+                                <Button
+                                  size="sm"
+                                  variant="success"
+                                  loading={resolving}
+                                  disabled={!(warrantyPayloads[req.id] ?? "").trim()}
+                                  onClick={() => void resolveWarranty(req.id, "REPLACED")}
+                                >
+                                  Đã bảo hành
+                                </Button>
+                              </div>
+                            </div>
+
+                            <div className="grid gap-2 rounded-brutal border-3 border-brutal bg-brutal-bg p-3">
+                              <label className="text-xs font-semibold text-gray-600">
+                                Ghi chú gửi khách (bắt buộc khi từ chối)
+                              </label>
+                              <Input
+                                placeholder="Lý do / ghi chú…"
+                                value={warrantyNotes[req.id] ?? ""}
+                                onChange={(e) =>
+                                  setWarrantyNote(req.id, e.target.value)
+                                }
+                              />
+                              <div className="flex flex-wrap justify-end gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  loading={resolving}
+                                  onClick={() => void resolveWarranty(req.id, "REFUNDED")}
+                                >
+                                  Đã hoàn tiền
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="danger"
+                                  loading={resolving}
+                                  disabled={!(warrantyNotes[req.id] ?? "").trim()}
+                                  onClick={() => void resolveWarranty(req.id, "REJECTED")}
+                                >
+                                  Từ chối
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ) : req.resolution_note ? (
+                          <div className="text-xs text-gray-600">
+                            <span className="font-semibold">Ghi chú:</span>{" "}
+                            {req.resolution_note}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>

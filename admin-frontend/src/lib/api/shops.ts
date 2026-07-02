@@ -141,3 +141,47 @@ export async function reorderPaymentCredentials(
   );
 }
 
+export type ShopCustomer = {
+  user_id: number;
+  email: string | null;
+  username: string | null;
+  full_name: string | null;
+  telegram_id: string | null;
+  status: "ACTIVE" | "BANNED";
+  order_count: number;
+  total_spent: number;
+  first_seen_at: string;
+};
+
+export async function listShopCustomers(
+  token: string,
+  shopId: string,
+  args: { page?: number; limit?: number; search?: string } = {},
+) {
+  const qs = new URLSearchParams();
+  if (args.page) qs.set("page", String(args.page));
+  if (args.limit) qs.set("limit", String(args.limit));
+  if (args.search) qs.set("search", args.search);
+  return apiFetch<{
+    customers: ShopCustomer[];
+    pagination: { page: number; limit: number; total: number; totalPages: number };
+  }>(`/api/admin/v1/shops/${shopId}/customers?${qs.toString()}`, {
+    method: "GET",
+    token,
+    shopId,
+    cache: "no-store",
+  });
+}
+
+export async function setShopCustomerStatus(
+  token: string,
+  shopId: string,
+  userId: number,
+  status: "ACTIVE" | "BANNED",
+) {
+  return apiFetch<{ user_id: number; status: string }>(
+    `/api/admin/v1/shops/${shopId}/customers/${userId}/status`,
+    { method: "PUT", token, shopId, body: { status }, cache: "no-store" },
+  );
+}
+

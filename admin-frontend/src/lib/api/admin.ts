@@ -11,6 +11,7 @@ export type AdminOrder = {
   item_count: number;
   reserved_count?: number;
   delivered_count?: number;
+  open_warranty_count?: number;
   created_at: string;
   updated_at: string;
 };
@@ -49,6 +50,46 @@ export type AdminOrderMessage = {
   created_at: string;
 };
 
+export type AdminWarrantyRequest = {
+  id: number;
+  order_id: string;
+  order_item_id: number | null;
+  user_id: number;
+  reason: string;
+  days_used: number | null;
+  status: "OPEN" | "REPLACED" | "REFUNDED" | "REJECTED";
+  resolution_note: string | null;
+  resolved_by: number | null;
+  resolved_at: string | null;
+  created_at: string;
+  variant_id: number | null;
+  snapshot_variant_name: string | null;
+  warranty_type: string | null;
+};
+
+export async function adminListWarrantyRequests(token: string, orderId: string) {
+  return apiFetch<{ requests: AdminWarrantyRequest[] }>(
+    `/api/admin/v1/orders/${orderId}/warranty-requests`,
+    { method: "GET", token, cache: "no-store" },
+  );
+}
+
+export async function adminResolveWarranty(
+  token: string,
+  orderId: string,
+  requestId: number,
+  input: {
+    resolution: "REPLACED" | "REFUNDED" | "REJECTED";
+    payload?: string;
+    note?: string;
+  },
+) {
+  return apiFetch<{ id: number; status: string }>(
+    `/api/admin/v1/orders/${orderId}/warranty-requests/${requestId}/resolve`,
+    { method: "POST", token, body: input, cache: "no-store" },
+  );
+}
+
 export async function adminListOrderMessages(token: string, orderId: string) {
   return apiFetch<{ messages: AdminOrderMessage[] }>(
     `/api/admin/v1/orders/${orderId}/messages`,
@@ -78,6 +119,7 @@ export async function adminListOrders(
     limit?: number;
     status?: string;
     payment_code?: string;
+    warranty?: "open";
   } = {},
 ) {
   const qs = new URLSearchParams();
@@ -85,6 +127,7 @@ export async function adminListOrders(
   if (args.limit) qs.set("limit", String(args.limit));
   if (args.status) qs.set("status", args.status);
   if (args.payment_code) qs.set("payment_code", args.payment_code);
+  if (args.warranty) qs.set("warranty", args.warranty);
   return apiFetchPaginated<{ orders: AdminOrder[] }>(
     `/api/admin/v1/orders?${qs.toString()}`,
     {

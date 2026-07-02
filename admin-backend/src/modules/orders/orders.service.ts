@@ -9,11 +9,20 @@ import {
   resolvePagination,
 } from "../../common/utils/pagination.util";
 import { ErrorCodes } from "../../common/enums/error-codes.enum";
-import { MessageKind, OrderStatus, StockStatus } from "../../common/enums";
+import {
+  MessageKind,
+  OrderStatus,
+  StockStatus,
+  WarrantyRequestStatus,
+} from "../../common/enums";
 import { ConfirmOrderDto } from "./dto/confirm-order.dto";
 import { CreateOrderMessageDto } from "./dto/create-order-message.dto";
 import { DeliverOrderDto } from "./dto/deliver-order.dto";
 import { OrderQueryDto } from "./dto/order-query.dto";
+import {
+  ResolveWarrantyDto,
+  WarrantyResolution,
+} from "./dto/resolve-warranty.dto";
 
 type OrderListRow = {
   id: string;
@@ -27,8 +36,26 @@ type OrderListRow = {
   item_count: string;
   reserved_count: string;
   delivered_count: string;
+  open_warranty_count: string;
   created_at: Date;
   updated_at: Date;
+};
+
+type WarrantyRequestRow = {
+  id: number;
+  order_id: string;
+  order_item_id: number | null;
+  user_id: number;
+  reason: string;
+  days_used: number | null;
+  status: string;
+  resolution_note: string | null;
+  resolved_by: number | null;
+  resolved_at: Date | null;
+  created_at: Date;
+  variant_id: number | null;
+  snapshot_variant_name: string | null;
+  warranty_type: string | null;
 };
 
 type OrderRow = OrderListRow & {
@@ -72,6 +99,7 @@ export class OrdersService {
 
   async findAll(shopId: string, query: OrderQueryDto) {
     const { page, limit, offset } = resolvePagination(query);
+    const hasWarranty = await this.hasWarrantyRequestsTable();
     const params: unknown[] = [shopId];
     const conditions: string[] = [`o.shop_id = $1::uuid`];
 
@@ -83,6 +111,15 @@ export class OrdersService {
       params.push(`%${query.payment_code.trim()}%`);
       conditions.push(`o.payment_code ILIKE $${params.length}`);
     }
+    if (query.warranty === "open" && hasWarranty) {
+      conditions.push(
+        `EXISTS (SELECT 1 FROM warranty_requests wr WHERE wr.order_id = o.id AND wr.status = 'OPEN')`,
+      );
+    }
+
+    const openWarrantySelect = hasWarranty
+      ? `(SELECT COUNT(*) FROM warranty_requests wr WHERE wr.order_id = o.id AND wr.status = 'OPEN')::text`
+      : `'0'::text`;
 
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
 
@@ -109,6 +146,7 @@ export class OrdersService {
           COUNT(oi.id)::text AS item_count,
           COUNT(si.id) FILTER (WHERE si.status = 'RESERVED')::text AS reserved_count,
           COUNT(si.id) FILTER (WHERE si.status = 'DELIVERED')::text AS delivered_count,
+          ${openWarrantySelect} AS open_warranty_count,
           o.created_at,
           o.updated_at
         FROM orders o
@@ -341,6 +379,154 @@ export class OrdersService {
     return this.toMessage(res.rows[0]);
   }
 
+  async listWarrantyRequests(shopId: string, orderId: string) {
+    await this.assertOrderExists(shopId, orderId);
+    if (!(await this.hasWarrantyRequestsTable())) {
+      return { requests: [] };
+    }
+
+    const res = await this.pool.query<WarrantyRequestRow>(
+      `SELECT wr.id, wr.order_id::text AS order_id, wr.order_item_id, wr.user_id,
+              wr.reason, wr.days_used, wr.status::text AS status, wr.resolution_note,
+              wr.resolved_by, wr.resolved_at, wr.created_at,
+              oi.variant_id, oi.snapshot_variant_name,
+              oi.snapshot_warranty_type::text AS warranty_type
+       FROM warranty_requests wr
+       LEFT JOIN order_items oi ON oi.id = wr.order_item_id
+       WHERE wr.order_id = $1::uuid AND wr.shop_id = $2::uuid
+       ORDER BY wr.id DESC`,
+      [orderId, shopId],
+    );
+
+    return { requests: res.rows.map((row) => this.toWarrantyRequest(row)) };
+  }
+
+  /**
+   * Resolve a warranty claim. REPLACED attaches a fresh DELIVERED stock row to the
+   * order (so the buyer sees the replacement payload); REFUNDED/REJECTED only record
+   * the seller decision. A SYSTEM message is posted so the buyer is notified.
+   */
+  async resolveWarranty(
+    shopId: string,
+    orderId: string,
+    requestId: number,
+    dto: ResolveWarrantyDto,
+    adminUserId: number,
+  ) {
+    await this.assertOrderExists(shopId, orderId);
+    if (!(await this.hasWarrantyRequestsTable())) {
+      throw new BadRequestException({
+        code: ErrorCodes.VALIDATION_ERROR,
+        message: "warranty_requests table is not available — run DB migration",
+      });
+    }
+
+    const found = await this.pool.query<{
+      id: number;
+      status: string;
+      order_item_id: number | null;
+      variant_id: number | null;
+    }>(
+      `SELECT wr.id, wr.status::text AS status, wr.order_item_id, oi.variant_id
+       FROM warranty_requests wr
+       LEFT JOIN order_items oi ON oi.id = wr.order_item_id
+       WHERE wr.id = $1 AND wr.order_id = $2::uuid AND wr.shop_id = $3::uuid`,
+      [requestId, orderId, shopId],
+    );
+    const request = found.rows[0];
+    if (!request) {
+      throw new NotFoundException({
+        code: ErrorCodes.ORDER_NOT_FOUND,
+        message: `Warranty request ${requestId} not found`,
+      });
+    }
+    if (request.status !== WarrantyRequestStatus.OPEN) {
+      throw new BadRequestException({
+        code: ErrorCodes.VALIDATION_ERROR,
+        message: `Warranty request is already ${request.status}`,
+      });
+    }
+
+    if (dto.resolution === WarrantyResolution.REPLACED) {
+      const payload = dto.payload?.trim();
+      if (!payload) {
+        throw new BadRequestException({
+          code: ErrorCodes.VALIDATION_ERROR,
+          message: "payload is required to replace a faulty item",
+        });
+      }
+      if (!request.variant_id) {
+        throw new BadRequestException({
+          code: ErrorCodes.VALIDATION_ERROR,
+          message: "Warranty request has no linked order item / variant",
+        });
+      }
+      await this.pool.query(
+        `INSERT INTO stock_items
+           (variant_id, status, is_locked, payload, note, order_id, reserved_at, delivered_at)
+         VALUES ($1, 'DELIVERED', false, $2, 'warranty replacement', $3::uuid, NOW(), NOW())`,
+        [request.variant_id, payload, orderId],
+      );
+    }
+
+    if (dto.resolution === WarrantyResolution.REJECTED && !dto.note?.trim()) {
+      throw new BadRequestException({
+        code: ErrorCodes.VALIDATION_ERROR,
+        message: "note is required when rejecting a warranty request",
+      });
+    }
+
+    await this.pool.query(
+      `UPDATE warranty_requests
+       SET status = $1::warranty_request_status_enum,
+           resolution_note = $2,
+           resolved_by = $3,
+           resolved_at = NOW(),
+           updated_at = NOW()
+       WHERE id = $4`,
+      [dto.resolution, dto.note?.trim() || null, adminUserId, requestId],
+    );
+
+    await this.postWarrantySystemMessage(
+      shopId,
+      orderId,
+      request.order_item_id,
+      adminUserId,
+      dto,
+    );
+
+    return { id: requestId, status: dto.resolution };
+  }
+
+  private async postWarrantySystemMessage(
+    shopId: string,
+    orderId: string,
+    orderItemId: number | null,
+    adminUserId: number,
+    dto: ResolveWarrantyDto,
+  ): Promise<void> {
+    if (!(await this.hasOrderMessagesTable())) return;
+
+    let message: string;
+    if (dto.resolution === WarrantyResolution.REPLACED) {
+      message = "Đã bổ sung hàng bảo hành mới cho đơn.";
+    } else if (dto.resolution === WarrantyResolution.REFUNDED) {
+      message = "Seller đã xử lý hoàn tiền cho yêu cầu bảo hành.";
+    } else {
+      message = `Yêu cầu bảo hành bị từ chối: ${dto.note?.trim() ?? ""}`;
+    }
+    if (dto.note?.trim() && dto.resolution !== WarrantyResolution.REJECTED) {
+      message += ` (${dto.note.trim()})`;
+    }
+
+    await this.pool.query(
+      `INSERT INTO order_messages
+         (shop_id, order_id, order_item_id, user_id, sender_role, kind, message)
+       VALUES ($1::uuid, $2::uuid, $3, $4, 'ADMIN', 'SYSTEM'::order_message_kind_enum, $5)`,
+      [shopId, orderId, orderItemId, adminUserId, message],
+    );
+  }
+
   /**
    * Lazily create RESERVED stock slots (empty payload) for every PREORDER unit of a
    * paid order. Idempotent: only tops up the difference between ordered quantity and
@@ -476,6 +662,13 @@ export class OrdersService {
     return Boolean(res.rows[0]?.reg);
   }
 
+  private async hasWarrantyRequestsTable(): Promise<boolean> {
+    const res = await this.pool.query<{ reg: string | null }>(
+      `SELECT to_regclass('public.warranty_requests')::text AS reg`,
+    );
+    return Boolean(res.rows[0]?.reg);
+  }
+
   private toListItem(row: OrderListRow) {
     return {
       id: row.id,
@@ -488,6 +681,7 @@ export class OrdersService {
       item_count: Number(row.item_count),
       reserved_count: Number(row.reserved_count),
       delivered_count: Number(row.delivered_count),
+      open_warranty_count: Number(row.open_warranty_count ?? 0),
       created_at: row.created_at.toISOString(),
       updated_at: row.updated_at.toISOString(),
     };
@@ -530,6 +724,25 @@ export class OrdersService {
       kind: row.kind,
       message: row.message,
       created_at: row.created_at.toISOString(),
+    };
+  }
+
+  private toWarrantyRequest(row: WarrantyRequestRow) {
+    return {
+      id: row.id,
+      order_id: row.order_id,
+      order_item_id: row.order_item_id,
+      user_id: row.user_id,
+      reason: row.reason,
+      days_used: row.days_used,
+      status: row.status,
+      resolution_note: row.resolution_note,
+      resolved_by: row.resolved_by,
+      resolved_at: row.resolved_at?.toISOString() ?? null,
+      created_at: row.created_at.toISOString(),
+      variant_id: row.variant_id,
+      snapshot_variant_name: row.snapshot_variant_name,
+      warranty_type: row.warranty_type,
     };
   }
 }

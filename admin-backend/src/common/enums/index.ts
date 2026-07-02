@@ -57,6 +57,13 @@ export enum MessageKind {
   SYSTEM = "SYSTEM",
 }
 
+export enum WarrantyRequestStatus {
+  OPEN = "OPEN",
+  REPLACED = "REPLACED",
+  REFUNDED = "REFUNDED",
+  REJECTED = "REJECTED",
+}
+
 export enum PaymentStatus {
   PENDING = "PENDING",
   CONFIRMED = "CONFIRMED",

@@ -4,6 +4,7 @@ import {
   Settings,
   ShoppingCart,
   Ticket,
+  Users,
 } from "lucide-react";
 import type { TranslationKey } from "@/lib/i18n/types";
 
@@ -16,5 +17,6 @@ export const ADMIN_NAV_ITEMS: Array<{
   { href: "/admin/products", labelKey: "nav.products", icon: Package },
   { href: "/admin/orders", labelKey: "nav.orders", icon: ShoppingCart },
   { href: "/admin/coupons", labelKey: "nav.coupons", icon: Ticket },
+  { href: "/admin/customers", labelKey: "nav.customers", icon: Users },
   { href: "/admin/settings", labelKey: "nav.settings", icon: Settings },
 ];

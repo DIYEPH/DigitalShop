@@ -4,7 +4,9 @@ import {
   adminGetOrder,
   adminListOrderMessages,
   adminListStock,
+  adminListWarrantyRequests,
   adminPostOrderMessage,
+  adminResolveWarranty,
   adminUpdateStock,
 } from "@/lib/api/admin";
 
@@ -25,4 +27,16 @@ export const orderDetailService = {
     adminListOrderMessages(token, orderId),
   postMessage: (token: string, orderId: string, message: string) =>
     adminPostOrderMessage(token, orderId, { message }),
+  listWarranty: (token: string, orderId: string) =>
+    adminListWarrantyRequests(token, orderId),
+  resolveWarranty: (
+    token: string,
+    orderId: string,
+    requestId: number,
+    input: {
+      resolution: "REPLACED" | "REFUNDED" | "REJECTED";
+      payload?: string;
+      note?: string;
+    },
+  ) => adminResolveWarranty(token, orderId, requestId, input),
 };

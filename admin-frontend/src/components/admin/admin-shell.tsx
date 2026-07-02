@@ -51,15 +51,13 @@ export default function AdminShell({
         className="sticky top-0 z-100 isolate border-b-3 border-brutal"
         style={{ backgroundColor: "var(--brutal-bg)" }}
       >
-        <div className="mx-auto grid max-w-[1400px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2">
-          <div className="min-w-0">
-            <h1 className="shrink-0 text-lg font-black uppercase tracking-[0.08em] text-brutal-fg">
-              {t("shell.title")}
-            </h1>
-          </div>
+        <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2">
+          <h1 className="min-w-0 shrink-0 text-lg font-black uppercase tracking-[0.08em] text-brutal-fg">
+            {t("shell.title")}
+          </h1>
 
           {showNav ? (
-            <nav className="flex min-w-0 gap-2 overflow-x-auto pb-1">
+            <nav className="order-last flex w-full min-w-0 gap-2 overflow-x-auto pb-1 lg:order-0 lg:w-auto lg:flex-1">
               {ADMIN_NAV_ITEMS.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.href);
@@ -88,7 +86,7 @@ export default function AdminShell({
           )}
 
           {showNav ? (
-            <div className="flex items-center justify-end gap-2">
+            <div className="ml-auto flex min-w-0 items-center justify-end gap-2">
               {shell.shops.length > 0 ? (
                 <Select
                   value={shell.activeShopId ?? undefined}
@@ -96,7 +94,7 @@ export default function AdminShell({
                 >
                   <SelectTrigger
                     aria-label={t("shell.selectShop")}
-                    className="h-10 w-56 px-3 py-1 text-sm"
+                    className="h-10 w-36 min-w-0 px-3 py-1 text-sm sm:w-56"
                   >
                     <Store className="h-4 w-4 shrink-0" aria-hidden />
                     <SelectValue placeholder={t("shell.selectShop")} />
@@ -151,7 +149,7 @@ export default function AdminShell({
             </div>
           ) : (
             <div
-              className="h-7 w-16 animate-pulse rounded-brutal bg-brutal-muted"
+              className="ml-auto h-7 w-16 animate-pulse rounded-brutal bg-brutal-muted"
               aria-hidden
             />
           )}

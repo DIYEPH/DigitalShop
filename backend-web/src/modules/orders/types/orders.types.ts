@@ -7,11 +7,20 @@ export type FulfillmentType = 'IN_STOCK' | 'PREORDER';
 export type WarrantyType = 'LOGIN' | 'CUSTOM' | 'NONE';
 export type WarrantyUnit = 'HOUR' | 'DAY' | 'MONTH' | 'YEAR';
 export type OrderMessageKind = 'TEXT' | 'WARRANTY_REQUEST' | 'SYSTEM';
+export type WarrantyRequestStatus = 'OPEN' | 'REPLACED' | 'REFUNDED' | 'REJECTED';
+
+export type WarrantyRequestInfo = {
+  status: WarrantyRequestStatus;
+  days_used: number | null;
+  resolution_note: string | null;
+  created_at: string;
+};
 
 export type WarrantyInfo = {
   warranty_type: WarrantyType;
   warranty_expires_at: string | null;
   can_request_warranty: boolean;
+  request: WarrantyRequestInfo | null;
 };
 
 export type OrderMessage = {

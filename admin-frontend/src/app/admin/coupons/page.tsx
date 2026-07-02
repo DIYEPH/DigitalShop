@@ -437,7 +437,7 @@ export default function AdminCouponsPage() {
             <div className="text-xs font-black text-brutal-fg">
               {t("coupons.grantTitle")}
             </div>
-            <div className="grid grid-cols-3 gap-2 mt-2">
+            <div className="grid grid-cols-1 gap-2 mt-2 sm:grid-cols-3">
               <Field label={t("coupons.userIds")}>
                 <Input
                   size="sm"

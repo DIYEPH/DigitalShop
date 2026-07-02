@@ -56,7 +56,7 @@ export class ShopTenantGuard implements CanActivate {
           sm.role::text AS member_role
        FROM shop_members sm
        INNER JOIN shops s ON s.id = sm.shop_id
-       WHERE sm.user_id = $1 AND sm.shop_id = $2::uuid
+       WHERE sm.user_id = $1 AND sm.shop_id = $2::uuid AND sm.role <> 'CUSTOMER'
        LIMIT 1`,
       [user.id, shopId],
     );
