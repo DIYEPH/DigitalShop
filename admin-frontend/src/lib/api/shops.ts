@@ -21,15 +21,19 @@ export type TelegramBotSettings = {
   updated_at?: string;
 };
 
+export type ShopPaymentMethod = "BINANCE" | "BANK" | "CRYPTO";
+export type ShopPaymentProvider = "BINANCE" | "BANK" | "SEPAY" | "CRYPTO";
+
 export type PaymentCredential = {
   id: number;
   shop_id: string;
-  payment_method: "BINANCE" | "BANK" | "CRYPTO";
-  provider: "BINANCE" | "BANK" | "SEPAY" | "CRYPTO";
+  payment_method: ShopPaymentMethod;
+  provider: ShopPaymentProvider;
   display_name: string;
   public_payload: Record<string, unknown>;
   status: "ACTIVE" | "DISABLED";
-  has_payload: boolean;
+  priority: number;
+  has_secret: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -111,16 +115,29 @@ export async function upsertPaymentCredential(
   token: string,
   shopId: string,
   input: {
-    payment_method: "BINANCE" | "BANK" | "CRYPTO";
-    provider: "BINANCE" | "BANK" | "SEPAY" | "CRYPTO";
-    display_name: string;
-    payload: Record<string, unknown>;
+    payment_method: ShopPaymentMethod;
+    provider: ShopPaymentProvider;
+    display_name?: string;
+    payload?: Record<string, unknown>;
     public_payload?: Record<string, unknown>;
+    enabled?: boolean;
+    priority?: number;
   },
 ) {
   return apiFetch<PaymentCredential>(
     `/api/admin/v1/shops/${shopId}/payment-credentials`,
     { method: "PUT", token, shopId, body: input, cache: "no-store" },
+  );
+}
+
+export async function reorderPaymentCredentials(
+  token: string,
+  shopId: string,
+  order: ShopPaymentMethod[],
+) {
+  return apiFetch<{ credentials: PaymentCredential[] }>(
+    `/api/admin/v1/shops/${shopId}/payment-credentials/order`,
+    { method: "PUT", token, shopId, body: { order }, cache: "no-store" },
   );
 }
 

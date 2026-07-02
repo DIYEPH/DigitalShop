@@ -6,6 +6,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  Length,
   Max,
   Min,
   ValidateNested,
@@ -45,6 +46,22 @@ export class OrderCheckoutDto {
   @IsOptional()
   @IsString()
   coupon_code?: string;
+}
+
+export class PostOrderMessageDto {
+  @IsString()
+  @Length(1, 2000)
+  message!: string;
+
+  @IsOptional()
+  @IsIn(['TEXT', 'WARRANTY_REQUEST'])
+  kind?: 'TEXT' | 'WARRANTY_REQUEST';
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  order_item_id?: number | null;
 }
 
 export class ListOrdersQueryDto {

@@ -470,16 +470,35 @@ export type AdminStockItem = {
 
 export async function adminListStock(
   token: string,
-  args: { product_id?: number; variant_id?: number; status?: string } = {},
+  args: {
+    product_id?: number;
+    variant_id?: number;
+    order_id?: string;
+    status?: string;
+  } = {},
 ) {
   const qs = new URLSearchParams();
   if (args.product_id) qs.set("product_id", String(args.product_id));
   if (args.variant_id) qs.set("variant_id", String(args.variant_id));
+  if (args.order_id) qs.set("order_id", args.order_id);
   if (args.status) qs.set("status", args.status);
   return apiFetch<{ items: AdminStockItem[] }>(
     `/api/admin/v1/stock?${qs.toString()}`,
     { method: "GET", token, cache: "no-store" },
   );
+}
+
+export async function adminUpdateStock(
+  token: string,
+  stockItemId: number,
+  input: { payload: string; note?: string },
+) {
+  return apiFetch<AdminStockItem>(`/api/admin/v1/stock/${stockItemId}`, {
+    method: "PUT",
+    token,
+    body: input,
+    cache: "no-store",
+  });
 }
 
 export async function adminAddStock(

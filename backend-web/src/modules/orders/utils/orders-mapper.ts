@@ -4,6 +4,13 @@ import {
   WalletNetwork,
 } from '../types/orders.types';
 
+const WARRANTY_UNIT_MS: Record<string, number> = {
+  HOUR: 60 * 60 * 1000,
+  DAY: 24 * 60 * 60 * 1000,
+  MONTH: 30 * 24 * 60 * 60 * 1000,
+  YEAR: 365 * 24 * 60 * 60 * 1000,
+};
+
 export const PENDING_PAYMENT_TIMEOUT_MS = 10 * 60 * 1000;
 
 export function paymentMethodToDb(method: StorefrontPaymentMethod): DbPaymentMethod {
@@ -40,6 +47,10 @@ export function toIso(value: Date | string): string {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
 
+export function toStr(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
 export function buildOrderExpiry(createdAt: Date, paymentMethod: string): { expires_at: string | null; seconds_left: number | null } {
   if (paymentMethod === 'BALANCE') {
     return { expires_at: null, seconds_left: null };
@@ -52,6 +63,24 @@ export function buildOrderExpiry(createdAt: Date, paymentMethod: string): { expi
 
 export function normalizeNetwork(network: WalletNetwork | undefined): WalletNetwork {
   return network ?? 'TRC20';
+}
+
+/**
+ * Warranty starts when the order is delivered (fallback: paid). Returns null when
+ * the item has no warranty, lacks a duration, or the order has no start timestamp.
+ */
+export function computeWarrantyExpiry(
+  type: string,
+  value: number | null,
+  unit: string | null,
+  startAt: Date | string | null,
+): string | null {
+  if (type === 'NONE' || !value || value <= 0 || !unit || !startAt) return null;
+  const unitMs = WARRANTY_UNIT_MS[unit];
+  if (!unitMs) return null;
+  const start = startAt instanceof Date ? startAt : new Date(startAt);
+  if (Number.isNaN(start.getTime())) return null;
+  return new Date(start.getTime() + unitMs * value).toISOString();
 }
 
 export function generatePaymentCode(): string {

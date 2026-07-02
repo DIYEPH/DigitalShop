@@ -9,12 +9,13 @@ import { ConfigService } from '@nestjs/config';
 import { Pool, PoolClient } from 'pg';
 import { PaginationMeta } from '../../common/dto/api-response.dto';
 import { getPgPool } from '../../common/database/pg-pool';
-import { OrderCheckoutDto } from './dto/orders.dto';
+import { OrderCheckoutDto, PostOrderMessageDto } from './dto/orders.dto';
 import {
   CreateOrderResponse,
   DbPaymentMethod,
   FulfillmentType,
   OrderDetails,
+  OrderMessage,
   OrderQuote,
   OrderQuoteItem,
   OrderSummary,
@@ -22,10 +23,12 @@ import {
   PendingOrder,
   StorefrontPaymentMethod,
   WalletNetwork,
+  WarrantyInfo,
 } from './types/orders.types';
 import {
   allowedDbPaymentMethods,
   buildOrderExpiry,
+  computeWarrantyExpiry,
   generatePaymentCode,
   normalizeNetwork,
   paymentMethodToApi,
@@ -33,6 +36,7 @@ import {
   roundUsdt,
   toIso,
   toNumber,
+  toStr,
 } from './utils/orders-mapper';
 
 type VariantRow = {
@@ -70,12 +74,15 @@ type QuoteLine = {
 
 type OrderRow = {
   id: string;
+  shop_id: string;
   total_price: string;
   currency: string;
   payment_method: string;
   payment_code: string | null;
   status: 'PENDING' | 'PAID' | 'DELIVERED' | 'CANCELLED';
   delivery_note: string | null;
+  delivered_at: Date | null;
+  paid_at: Date | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -91,6 +98,8 @@ type OrderItemJson = {
   fulfillment_type: FulfillmentType;
   delivered_payloads?: string[];
 };
+
+type OrderMessageRow = Omit<OrderMessage, 'created_at'> & { created_at: Date };
 
 const UNIQUE_VIOLATION = '23505';
 
@@ -135,7 +144,11 @@ export class OrdersService {
 
     return {
       order: summary,
-      payment: this.buildPaymentInstruction(order, dto.payment_method, normalizeNetwork(dto.network)),
+      payment: await this.buildPaymentInstruction(
+        order,
+        dto.payment_method,
+        normalizeNetwork(dto.network),
+      ),
     };
   }
 
@@ -204,7 +217,8 @@ export class OrdersService {
 
   async getDetails(userId: number, orderId: string): Promise<OrderDetails> {
     const row = await this.findOrderRow(userId, orderId);
-    const items = await this.getDetailItems(orderId, row.status);
+    const warrantyStart = row.delivered_at ?? row.paid_at ?? null;
+    const items = await this.getDetailItems(orderId, row.status, warrantyStart);
     const expiry = buildOrderExpiry(row.created_at, row.payment_method);
 
     return {
@@ -222,6 +236,85 @@ export class OrdersService {
     };
   }
 
+  async listMessages(
+    userId: number,
+    orderId: string,
+  ): Promise<{ messages: OrderMessage[] }> {
+    await this.findOrderRow(userId, orderId);
+    const result = await this.pool.query<OrderMessageRow>(
+      `SELECT id, order_id::text, order_item_id, user_id,
+              sender_role::text AS sender_role, kind::text AS kind, message, created_at
+       FROM order_messages
+       WHERE order_id = $1::uuid
+       ORDER BY created_at ASC, id ASC`,
+      [orderId],
+    );
+    return {
+      messages: result.rows.map((row) => ({
+        ...row,
+        created_at: toIso(row.created_at),
+      })),
+    };
+  }
+
+  async postMessage(
+    userId: number,
+    orderId: string,
+    dto: PostOrderMessageDto,
+  ): Promise<OrderMessage> {
+    const order = await this.findOrderRow(userId, orderId);
+    const kind = dto.kind ?? 'TEXT';
+    const orderItemId = dto.order_item_id ?? null;
+
+    if (kind === 'WARRANTY_REQUEST') {
+      if (order.status !== 'PAID' && order.status !== 'DELIVERED') {
+        throw new BadRequestException('Warranty can only be requested on a paid or delivered order');
+      }
+      if (!orderItemId) {
+        throw new BadRequestException('order_item_id is required for a warranty request');
+      }
+      const item = await this.pool.query<{
+        type: string;
+        value: number | null;
+        unit: string | null;
+      }>(
+        `SELECT snapshot_warranty_type::text AS type,
+                snapshot_warranty_value AS value,
+                snapshot_warranty_unit::text AS unit
+         FROM order_items
+         WHERE id = $1 AND order_id = $2::uuid
+         LIMIT 1`,
+        [orderItemId, orderId],
+      );
+      const warranty = item.rows[0];
+      if (!warranty) {
+        throw new BadRequestException('Order item not found in this order');
+      }
+      const start = order.delivered_at ?? order.paid_at ?? null;
+      const expiresAt = computeWarrantyExpiry(
+        warranty.type,
+        warranty.value,
+        warranty.unit,
+        start,
+      );
+      if (!expiresAt || Date.now() >= new Date(expiresAt).getTime()) {
+        throw new BadRequestException('This item is out of warranty');
+      }
+    }
+
+    const inserted = await this.pool.query<OrderMessageRow>(
+      `INSERT INTO order_messages (
+          shop_id, order_id, order_item_id, user_id, sender_role, kind, message
+       )
+       VALUES ($1::uuid, $2::uuid, $3, $4, 'USER', $5::order_message_kind_enum, $6)
+       RETURNING id, order_id::text, order_item_id, user_id,
+                 sender_role::text AS sender_role, kind::text AS kind, message, created_at`,
+      [order.shop_id, orderId, orderItemId, userId, kind, dto.message.trim()],
+    );
+    const row = inserted.rows[0];
+    return { ...row, created_at: toIso(row.created_at) };
+  }
+
   async getPayment(userId: number, orderId: string): Promise<{ order: Omit<OrderSummary, 'items' | 'created_at'>; payment: PaymentInstruction }> {
     const row = await this.findOrderRow(userId, orderId);
     const method = paymentMethodToApi(row.payment_method);
@@ -234,7 +327,7 @@ export class OrdersService {
         payment_method: method,
         status: row.status,
       },
-      payment: this.buildPaymentInstruction(row, method, 'TRC20'),
+      payment: await this.buildPaymentInstruction(row, method, 'TRC20'),
     };
   }
 
@@ -548,7 +641,7 @@ export class OrdersService {
         const result = await client.query<OrderRow>(
           `INSERT INTO orders (user_id, payment_code, total_price, currency, payment_method, coupon_id, status)
            VALUES ($1, $2, $3, 'USDT'::currency_enum, $4::product_payment_method_enum, NULL, 'PENDING')
-           RETURNING id::text, total_price, currency::text, payment_method::text, payment_code,
+           RETURNING id::text, shop_id::text, total_price, currency::text, payment_method::text, payment_code,
                      status::text AS status, delivery_note, created_at, updated_at`,
           [userId, paymentCode, totalPrice, paymentMethod],
         );
@@ -622,8 +715,8 @@ export class OrdersService {
 
   private async findOrderRow(userId: number, orderId: string): Promise<OrderRow> {
     const result = await this.pool.query<OrderRow>(
-      `SELECT id::text, total_price, currency::text, payment_method::text, payment_code,
-              status::text AS status, delivery_note, created_at, updated_at
+      `SELECT id::text, shop_id::text, total_price, currency::text, payment_method::text, payment_code,
+              status::text AS status, delivery_note, delivered_at, paid_at, created_at, updated_at
        FROM orders
        WHERE id = $1::uuid AND user_id = $2
        LIMIT 1`,
@@ -691,11 +784,25 @@ export class OrdersService {
     };
   }
 
-  private async getDetailItems(orderId: string, status: string): Promise<OrderDetails['items']> {
-    const result = await this.pool.query<OrderItemJson & { delivered_payloads: unknown }>(
+  private async getDetailItems(
+    orderId: string,
+    status: string,
+    warrantyStart: Date | null,
+  ): Promise<OrderDetails['items']> {
+    const result = await this.pool.query<
+      OrderItemJson & {
+        delivered_payloads: unknown;
+        snapshot_warranty_type: string;
+        snapshot_warranty_value: number | null;
+        snapshot_warranty_unit: string | null;
+      }
+    >(
       `SELECT oi.id AS order_item_id, oi.variant_id, pv.product_id, p.name_en AS product_name,
               oi.snapshot_variant_name, oi.quantity, oi.unit_price::float8 AS unit_price,
               oi.snapshot_fulfillment_type::text AS fulfillment_type,
+              oi.snapshot_warranty_type::text AS snapshot_warranty_type,
+              oi.snapshot_warranty_value,
+              oi.snapshot_warranty_unit::text AS snapshot_warranty_unit,
               COALESCE(
                 (
                   SELECT json_agg(si.payload ORDER BY si.created_at ASC)
@@ -714,19 +821,40 @@ export class OrdersService {
       [orderId],
     );
 
-    return result.rows.map((row) => ({
-      order_item_id: row.order_item_id,
-      variant_id: row.variant_id,
-      product_id: row.product_id,
-      product_name: row.product_name,
-      snapshot_variant_name: row.snapshot_variant_name,
-      quantity: row.quantity,
-      unit_price: toNumber(row.unit_price),
-      fulfillment_type: row.fulfillment_type,
-      delivered_payloads: status === 'DELIVERED' && Array.isArray(row.delivered_payloads)
-        ? row.delivered_payloads.map(String)
-        : [],
-    }));
+    const isFulfilled = status === 'PAID' || status === 'DELIVERED';
+
+    return result.rows.map((row) => {
+      const warrantyExpiresAt = isFulfilled
+        ? computeWarrantyExpiry(
+            row.snapshot_warranty_type,
+            row.snapshot_warranty_value,
+            row.snapshot_warranty_unit,
+            warrantyStart,
+          )
+        : null;
+      const canRequestWarranty =
+        warrantyExpiresAt !== null && Date.now() < new Date(warrantyExpiresAt).getTime();
+
+      return {
+        order_item_id: row.order_item_id,
+        variant_id: row.variant_id,
+        product_id: row.product_id,
+        product_name: row.product_name,
+        snapshot_variant_name: row.snapshot_variant_name,
+        quantity: row.quantity,
+        unit_price: toNumber(row.unit_price),
+        fulfillment_type: row.fulfillment_type,
+        delivered_payloads:
+          status === 'DELIVERED' && Array.isArray(row.delivered_payloads)
+            ? row.delivered_payloads.map(String)
+            : [],
+        warranty: {
+          warranty_type: (row.snapshot_warranty_type as WarrantyInfo['warranty_type']) ?? 'NONE',
+          warranty_expires_at: warrantyExpiresAt,
+          can_request_warranty: canRequestWarranty,
+        },
+      };
+    });
   }
 
   private parseItems(value: unknown): OrderItemJson[] {
@@ -738,28 +866,76 @@ export class OrdersService {
     return [];
   }
 
-  private buildPaymentInstruction(order: Pick<OrderRow, 'payment_method' | 'payment_code' | 'total_price'>, method: StorefrontPaymentMethod, network: WalletNetwork): PaymentInstruction {
+  private async buildPaymentInstruction(
+    order: Pick<OrderRow, 'shop_id' | 'payment_method' | 'payment_code' | 'total_price'>,
+    method: StorefrontPaymentMethod,
+    network: WalletNetwork,
+  ): Promise<PaymentInstruction> {
     const amount = toNumber(order.total_price);
     if (method === 'BALANCE') {
       return { method: 'BALANCE', amount, currency: 'USDT' };
     }
+
     if (method === 'BINANCE') {
+      const pub = await this.loadShopCredentialPublic(order.shop_id, 'BINANCE');
+      const payId =
+        toStr(pub?.pay_id) || this.config.get<string>('BINANCE_PAY_ID') || null;
+      const qrUrl = toStr(pub?.qr_url) || null;
       return {
         method: 'BINANCE',
-        binance_id: this.config.get<string>('BINANCE_PAY_ID') || null,
-        binance_pay_id: this.config.get<string>('BINANCE_PAY_ID') || null,
+        binance_id: payId,
+        binance_pay_id: payId,
+        qr_url: qrUrl,
         payment_code: order.payment_code,
         note: order.payment_code ?? undefined,
         amount,
       };
     }
 
-    const walletAddress = this.resolveUsdtWallet(network);
+    const pub = await this.loadShopCredentialPublic(order.shop_id, 'CRYPTO');
+    const walletAddress =
+      this.resolveShopWallet(pub, network) ?? this.resolveUsdtWallet(network);
     return { method: 'USDT', wallet_address: walletAddress, network, amount };
   }
 
+  private async loadShopCredentialPublic(
+    shopId: string,
+    dbMethod: 'BINANCE' | 'CRYPTO',
+  ): Promise<Record<string, unknown> | null> {
+    const result = await this.pool.query<{ public_payload: Record<string, unknown> }>(
+      `SELECT public_payload
+       FROM shop_payment_credentials
+       WHERE shop_id = $1::uuid
+         AND payment_method = $2::product_payment_method_enum
+         AND status = 'ACTIVE'
+       LIMIT 1`,
+      [shopId, dbMethod],
+    );
+    return result.rows[0]?.public_payload ?? null;
+  }
+
+  private resolveShopWallet(
+    pub: Record<string, unknown> | null,
+    network: WalletNetwork,
+  ): string | null {
+    const networks = Array.isArray(pub?.networks)
+      ? (pub!.networks as Array<Record<string, unknown>>)
+      : [];
+    const rows = networks
+      .map((n) => ({ network: toStr(n.network), wallet: toStr(n.wallet_address) }))
+      .filter((n) => n.wallet.length > 0);
+    if (rows.length === 0) return null;
+    const exact = rows.find((n) => n.network === network);
+    return (exact ?? rows[0]).wallet;
+  }
+
   private resolveUsdtWallet(network: WalletNetwork): string {
-    const key = network === 'ERC20' ? 'USDT_ERC20_WALLET_ADDRESS' : 'USDT_TRC20_WALLET_ADDRESS';
+    const key =
+      network === 'ERC20'
+        ? 'USDT_ERC20_WALLET_ADDRESS'
+        : network === 'BSC'
+          ? 'USDT_BSC_WALLET_ADDRESS'
+          : 'USDT_TRC20_WALLET_ADDRESS';
     const wallet = this.config.get<string>(key) || this.config.get<string>('USDT_WALLET_ADDRESS');
     if (!wallet) {
       throw new ServiceUnavailableException(`${key} is not configured`);

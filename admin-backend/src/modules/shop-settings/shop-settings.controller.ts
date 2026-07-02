@@ -14,6 +14,7 @@ import { CurrentShop as CurrentShopDecorator } from "../../common/decorators/cur
 import { ShopScoped } from "../../common/decorators/shop-scoped.decorator";
 import { CurrentShop } from "../tenant/types/current-shop";
 import {
+  ReorderPaymentCredentialsDto,
   UpdateTelegramBotDto,
   UpsertPaymentCredentialDto,
 } from "./dto/shop-settings.dto";
@@ -64,6 +65,21 @@ export class ShopSettingsController {
     @Body() dto: UpsertPaymentCredentialDto,
   ) {
     return this.shopSettingsService.upsertPaymentCredential(currentShop, shopId, dto);
+  }
+
+  @Put("payment-credentials/order")
+  @ShopScoped()
+  @ApiOperation({ summary: "Reorder payment methods by priority" })
+  reorderPaymentCredentials(
+    @CurrentShopDecorator() currentShop: CurrentShop,
+    @Param("shopId") shopId: string,
+    @Body() dto: ReorderPaymentCredentialsDto,
+  ) {
+    return this.shopSettingsService.reorderPaymentCredentials(
+      currentShop,
+      shopId,
+      dto,
+    );
   }
 
   @Delete("payment-credentials/:credentialId")
