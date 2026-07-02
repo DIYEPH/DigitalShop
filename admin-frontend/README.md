@@ -1,36 +1,19 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DigitalShop Seller Admin Frontend
 
-## Getting Started
+This app is the seller-facing admin UI.
 
-First, run the development server:
+## Backend Boundary
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Seller admin API: `admin-backend`
+- Platform admin/support API: `platform-admin-backend`
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Seller Flow
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Seller logs in.
+2. If the user has shops, the UI requires an active shop selection and sends `X-Shop-Id`.
+3. If the user has no shop but `can_create_shop = true`, show shop onboarding.
+4. If the user has no shop and no creation permission, show an access-pending state.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Out of Scope
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This app should not expose platform-wide user management, global category CRUD, support actions, or cross-shop reporting. Those belong in a separate platform admin UI.

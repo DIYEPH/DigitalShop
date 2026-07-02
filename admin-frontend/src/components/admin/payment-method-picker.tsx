@@ -40,7 +40,7 @@ export function PaymentMethodPicker({ value, onChange, className }: Props) {
           <Button
             key={method}
             type="button"
-            uiSize="sm"
+            size="sm"
             variant={value.includes(method) ? "primary" : "ghost"}
             onClick={() => toggle(method)}
           >

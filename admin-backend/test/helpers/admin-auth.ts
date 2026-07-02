@@ -28,3 +28,7 @@ export async function adminLogin(
 export function bearerHeaders(token: string): Record<string, string> {
   return { Authorization: `Bearer ${token}` };
 }
+
+export function sellerHeaders(token: string, shopId: string): Record<string, string> {
+  return { ...bearerHeaders(token), "X-Shop-Id": shopId };
+}

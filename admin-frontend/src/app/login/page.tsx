@@ -8,7 +8,7 @@ import { login } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 import { readAdminSession } from "@/lib/auth/session";
 import { setAuthToken } from "@/lib/auth/token";
-import { decodeJwt, isJwtExpired } from "@/lib/auth/jwt";
+import { useLanguage } from "@/lib/i18n/use-language";
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -16,6 +16,7 @@ function isValidEmail(email: string): boolean {
 
 export default function LoginPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -37,66 +38,57 @@ export default function LoginPage() {
 
     const e1 = email.trim();
     if (!isValidEmail(e1)) {
-      setError("Email không hợp lệ.");
+      setError(t("errors.invalidEmail"));
       return;
     }
     if (password.length < 6) {
-      setError("Mật khẩu ít nhất 6 ký tự.");
+      setError(t("errors.passwordMin"));
       return;
     }
 
     setSubmitting(true);
     try {
       const res = await login(e1, password);
-      const payload = decodeJwt(res.access_token);
-      if (!payload || isJwtExpired(payload) || payload.role !== "ADMIN") {
-        setError("Cần quyền ADMIN.");
-        return;
-      }
       setAuthToken(res.access_token);
       router.push("/admin");
       router.refresh();
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.code === "AUTH_002")
-          setError("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+          setError(t("errors.sessionExpired"));
         else setError(err.message);
-      } else setError("Đăng nhập thất bại.");
+      } else setError("Login failed.");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-background px-4">
-      <div
-        className="pointer-events-none absolute inset-0 bg-gradient-glow"
-        aria-hidden
-      />
+    <div className="relative flex min-h-screen items-center justify-center bg-brutal-muted px-4">
       <form
         onSubmit={onSubmit}
-        className="relative grid w-full max-w-md gap-4 rounded-xl border border-border bg-surface p-6 shadow-(--shadow-md)"
+        className="relative grid w-full max-w-md gap-4 rounded-brutal border-3 border-brutal bg-brutal-bg p-6 shadow-brutal"
       >
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Đăng nhập quản trị
+          <h1 className="text-3xl font-black uppercase tracking-tight text-brutal-fg">
+            {t("login.title")}
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            DigitalShop Admin
+          <p className="mt-1 text-sm font-bold text-gray-600">
+            {t("login.subtitle")}
           </p>
         </div>
 
         {error ? (
-          <p className="rounded-lg border border-danger/20 bg-danger/10 p-2 text-sm font-medium text-danger">
+          <p className="rounded-brutal border-3 border-brutal bg-brutal-destructive p-2 text-sm font-black text-brutal-fg shadow-brutal-sm">
             {error}
           </p>
         ) : null}
 
         <label className="grid gap-1.5" htmlFor="login-email">
-          <span className="text-sm font-medium text-foreground">Email</span>
+          <span className="text-sm font-medium text-brutal-fg">{t("login.email")}</span>
           <Input
             id="login-email"
-            uiSize="lg"
+            size="lg"
             type="email"
             autoComplete="email"
             value={email}
@@ -106,10 +98,10 @@ export default function LoginPage() {
         </label>
 
         <label className="grid gap-1.5" htmlFor="login-password">
-          <span className="text-sm font-medium text-foreground">Mật khẩu</span>
+          <span className="text-sm font-medium text-brutal-fg">{t("login.password")}</span>
           <Input
             id="login-password"
-            uiSize="lg"
+            size="lg"
             type="password"
             autoComplete="current-password"
             value={password}
@@ -120,18 +112,17 @@ export default function LoginPage() {
 
         <Button
           type="submit"
+          variant="primary"
           className="w-full"
-          uiSize="md"
+          size="default"
           loading={submitting}
           disabled={!canSubmit}
         >
-          Đăng nhập
+          {t("login.submit")}
         </Button>
 
-        <p className="text-xs text-muted-foreground">
-          Chỉ tài khoản có vai trò{" "}
-          <span className="font-semibold text-foreground">ADMIN</span> mới vào
-          được bảng quản trị.
+        <p className="text-xs font-bold text-gray-600">
+          {t("login.requireSeller")}
         </p>
       </form>
     </div>

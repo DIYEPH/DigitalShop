@@ -1,16 +1,36 @@
-import type { HTMLAttributes } from "react";
-import { cn } from "@/lib/cn";
+import * as React from 'react';
+import { cva, type VariantProps } from 'class-variance-authority';
+import { cn } from "@/lib/utils";
 
-type Props = HTMLAttributes<HTMLSpanElement> & {
-  required?: boolean;
-};
+const labelVariants = cva(
+    [
+        'text-sm font-bold tracking-wide leading-none',
+        'peer-disabled:cursor-not-allowed peer-disabled:opacity-70',
+    ],
+    {
+        variants: {
+            variant: {
+                default: 'text-brutal-fg',
+                error: 'text-brutal-destructive',
+                success: 'text-brutal-success',
+                muted: 'text-gray-500 dark:text-gray-400',
+            },
+        },
+        defaultVariants: {
+            variant: 'default',
+        },
+    }
+);
 
-/** Text nhãn field — đặt trong `<label className="grid">` bọc Input. */
-export function Label({ className, children, required, ...props }: Props) {
-  return (
-    <span className={cn("text-xs font-semibold text-muted-foreground", className)} {...props}>
-      {children}
-      {required ? <span className="text-danger"> *</span> : null}
-    </span>
-  );
-}
+export interface LabelProps
+    extends React.LabelHTMLAttributes<HTMLLabelElement>,
+        VariantProps<typeof labelVariants> {}
+
+const Label = React.forwardRef<HTMLLabelElement, LabelProps>(
+    ({ className, variant, ...props }, ref) => (
+        <label ref={ref} className={cn(labelVariants({ variant, className }))} {...props} />
+    )
+);
+Label.displayName = 'Label';
+
+export { Label, labelVariants };

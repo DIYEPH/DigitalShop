@@ -1,114 +1,52 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Alert, Button, Card, Input } from "@/components/ui";
-import { changePassword } from "@/lib/api/auth";
-import { ApiError } from "@/lib/api/client";
-import { useAdminToken } from "@/lib/auth/use-admin-token";
+import { useLanguage } from "@/lib/i18n/use-language";
+import { BotSettingsCard } from "./components/bot-settings-card";
+import { PasswordCard } from "./components/password-card";
+import { PaymentCredentialsCard } from "./components/payment-credentials-card";
+import { SettingsNotices } from "./components/settings-notices";
+import { ShopProfileCard } from "./components/shop-profile-card";
+import { useShopSettings } from "./settings.hooks";
 
 export default function AdminSettingsPage() {
-  const token = useAdminToken();
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-
-  const canSubmit = useMemo(
-    () =>
-      currentPassword.length >= 6 &&
-      newPassword.length >= 6 &&
-      confirmPassword.length >= 6 &&
-      newPassword === confirmPassword,
-    [currentPassword, newPassword, confirmPassword],
-  );
-
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccess(null);
-
-    if (!token) {
-      setError("Phiên đăng nhập hết hạn.");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setError("Mật khẩu mới không khớp.");
-      return;
-    }
-    if (currentPassword === newPassword) {
-      setError("Mật khẩu mới phải khác mật khẩu hiện tại.");
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      await changePassword(token, currentPassword, newPassword);
-      setSuccess("Đã đổi mật khẩu thành công.");
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-    } catch (err) {
-      if (err instanceof ApiError) setError(err.message);
-      else setError("Không thể đổi mật khẩu.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const { t } = useLanguage();
+  const settings = useShopSettings(t);
 
   return (
     <div className="grid gap-4">
       <div>
-        <h1 className="text-lg font-semibold tracking-tight text-foreground">
-          Cài đặt
+        <h1 className="text-2xl font-black uppercase tracking-tight text-brutal-fg">
+          {t("settings.title")}
         </h1>
-        <p className="text-sm text-muted-foreground">Tài khoản quản trị</p>
+        <p className="text-sm font-bold text-gray-600">
+          {t("settings.subtitle")}
+        </p>
       </div>
 
-      <Card title="Đổi mật khẩu" subtitle="Mật khẩu tối thiểu 6 ký tự">
-        <form onSubmit={onSubmit} className="grid max-w-md gap-3">
-          {error ? <Alert tone="error">{error}</Alert> : null}
-          {success ? <Alert tone="success">{success}</Alert> : null}
+      <SettingsNotices {...settings.notices} />
 
-          <label className="grid gap-1.5" htmlFor="current-password">
-            <span className="text-sm font-medium">Mật khẩu hiện tại</span>
-            <Input
-              id="current-password"
-              type="password"
-              autoComplete="current-password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-            />
-          </label>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <ShopProfileCard
+          t={t}
+          shop={settings.shop}
+          loading={settings.loading}
+          form={settings.shopForm}
+        />
+        <BotSettingsCard
+          t={t}
+          shop={settings.shop}
+          bot={settings.bot}
+          form={settings.botForm}
+        />
+      </div>
 
-          <label className="grid gap-1.5" htmlFor="new-password">
-            <span className="text-sm font-medium">Mật khẩu mới</span>
-            <Input
-              id="new-password"
-              type="password"
-              autoComplete="new-password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-            />
-          </label>
-
-          <label className="grid gap-1.5" htmlFor="confirm-password">
-            <span className="text-sm font-medium">Xác nhận mật khẩu mới</span>
-            <Input
-              id="confirm-password"
-              type="password"
-              autoComplete="new-password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-            />
-          </label>
-
-          <Button type="submit" loading={submitting} disabled={!canSubmit}>
-            Lưu mật khẩu
-          </Button>
-        </form>
-      </Card>
+      <PaymentCredentialsCard
+        t={t}
+        shop={settings.shop}
+        credentials={settings.credentials}
+        form={settings.credentialForm}
+      />
+      <PasswordCard t={t} form={settings.passwordForm} />
     </div>
   );
 }

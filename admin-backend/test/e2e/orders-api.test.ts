@@ -8,7 +8,7 @@ import { INestApplication } from "@nestjs/common";
 import request from "supertest";
 import { config } from "dotenv";
 import { getPgPool } from "../../src/common/database/pg-pool";
-import { adminLogin, bearerHeaders } from "../helpers/admin-auth";
+import { adminLogin, bearerHeaders, sellerHeaders } from "../helpers/admin-auth";
 import { createTestApp } from "../helpers/create-test-app";
 
 config({ path: path.resolve(__dirname, "../../.env") });
@@ -19,6 +19,7 @@ const API = "/api/admin/v1";
 describe("Admin API — orders (e2e)", { skip: !hasDb }, () => {
   let app: INestApplication;
   let token: string;
+  let shopId: string;
   let testOrderId: string | null = null;
   let testUserId: number;
   let testVariantId: number;
@@ -28,6 +29,12 @@ describe("Admin API — orders (e2e)", { skip: !hasDb }, () => {
     token = await adminLogin(app);
 
     const pool = getPgPool();
+    const shopRes = await pool.query<{ id: string }>(
+      `SELECT id::text FROM shops WHERE slug = 'default' LIMIT 1`,
+    );
+    shopId = shopRes.rows[0]?.id;
+    assert.ok(shopId, "Need default shop from seed");
+
     const userRes = await pool.query<{ id: number }>(
       `SELECT id FROM users WHERE role = 'USER' AND status = 'ACTIVE' ORDER BY id ASC LIMIT 1`,
     );
@@ -35,18 +42,23 @@ describe("Admin API — orders (e2e)", { skip: !hasDb }, () => {
     assert.ok(testUserId, "Need at least one USER from seed");
 
     const variantRes = await pool.query<{ id: number }>(
-      `SELECT id FROM product_variants WHERE is_active = TRUE ORDER BY id ASC LIMIT 1`,
+      `SELECT v.id
+       FROM product_variants v
+       INNER JOIN products p ON p.id = v.product_id
+       WHERE v.is_active = TRUE AND p.shop_id = $1::uuid
+       ORDER BY v.id ASC LIMIT 1`,
+      [shopId],
     );
     testVariantId = variantRes.rows[0]?.id;
     assert.ok(testVariantId, "Need at least one variant from seed");
 
     const orderRes = await pool.query<{ id: string }>(
       `INSERT INTO orders (
-          user_id, payment_code, total_price, currency, payment_method, status
+          shop_id, user_id, payment_code, total_price, currency, payment_method, status
         )
-        VALUES ($1, $2, 10.00, 'USDT', 'BINANCE', 'PENDING')
+        VALUES ($1::uuid, $2, $3, 10.00, 'USDT', 'BINANCE', 'PENDING')
         RETURNING id::text AS id`,
-      [testUserId, `E2E${Date.now().toString(36).toUpperCase().slice(-6)}`],
+      [shopId, testUserId, `E2E${Date.now().toString(36).toUpperCase().slice(-6)}`],
     );
     testOrderId = orderRes.rows[0]?.id ?? null;
     assert.ok(testOrderId);
@@ -78,7 +90,7 @@ describe("Admin API — orders (e2e)", { skip: !hasDb }, () => {
   test("GET /orders — 200 paginated", async () => {
     const res = await request(app.getHttpServer())
       .get(`${API}/orders?page=1&limit=10`)
-      .set(bearerHeaders(token))
+      .set(sellerHeaders(token, shopId))
       .expect(200);
 
     assert.equal(res.body.success, true);
@@ -92,7 +104,7 @@ describe("Admin API — orders (e2e)", { skip: !hasDb }, () => {
 
     const res = await request(app.getHttpServer())
       .get(`${API}/orders/${testOrderId}`)
-      .set(bearerHeaders(token))
+      .set(sellerHeaders(token, shopId))
       .expect(200);
 
     assert.equal(res.body.success, true);
@@ -111,7 +123,7 @@ describe("Admin API — orders (e2e)", { skip: !hasDb }, () => {
 
     const confirmRes = await request(app.getHttpServer())
       .post(`${API}/orders/${testOrderId}/confirm`)
-      .set(bearerHeaders(token))
+      .set(sellerHeaders(token, shopId))
       .send({})
       .expect(200);
 
@@ -119,7 +131,7 @@ describe("Admin API — orders (e2e)", { skip: !hasDb }, () => {
 
     const deliverRes = await request(app.getHttpServer())
       .post(`${API}/orders/${testOrderId}/deliver`)
-      .set(bearerHeaders(token))
+      .set(sellerHeaders(token, shopId))
       .send({ delivery_note: "E2E delivered" })
       .expect(200);
 
@@ -132,14 +144,14 @@ describe("Admin API — orders (e2e)", { skip: !hasDb }, () => {
 
     const listRes = await request(app.getHttpServer())
       .get(`${API}/orders/${testOrderId}/messages`)
-      .set(bearerHeaders(token))
+      .set(sellerHeaders(token, shopId))
       .expect(200);
 
     assert.ok(Array.isArray(listRes.body.data.messages));
 
     const postRes = await request(app.getHttpServer())
       .post(`${API}/orders/${testOrderId}/messages`)
-      .set(bearerHeaders(token))
+      .set(sellerHeaders(token, shopId))
       .send({ message: "Hello from e2e", kind: "TEXT" });
 
     if (postRes.status === 201) {

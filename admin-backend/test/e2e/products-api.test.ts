@@ -8,7 +8,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { config } from 'dotenv';
 import { getPgPool } from '../../src/common/database/pg-pool';
-import { adminLogin, bearerHeaders } from '../helpers/admin-auth';
+import { adminLogin, bearerHeaders, sellerHeaders } from '../helpers/admin-auth';
 import { createTestApp } from '../helpers/create-test-app';
 
 config({ path: path.resolve(__dirname, '../../.env') });
@@ -19,15 +19,26 @@ const API = '/api/admin/v1';
 describe('Admin API — products (e2e)', { skip: !hasDb }, () => {
   let app: INestApplication;
   let token: string;
+  let shopId: string;
   let categoryId: number;
   let createdProductId: number | null = null;
 
   before(async () => {
     app = await createTestApp();
     token = await adminLogin(app);
+    const shopRes = await getPgPool().query<{ id: string }>(
+      `SELECT id::text FROM shops WHERE slug = 'default' LIMIT 1`,
+    );
+    shopId = shopRes.rows[0]?.id;
+    assert.ok(shopId, 'Need default shop from seed');
 
     const catRes = await getPgPool().query<{ id: number }>(
-      `SELECT id FROM categories WHERE is_active = TRUE ORDER BY id ASC LIMIT 1`,
+      `SELECT c.id
+       FROM categories c
+       INNER JOIN shop_categories sc ON sc.category_id = c.id
+       WHERE c.is_active = TRUE AND sc.shop_id = $1::uuid
+       ORDER BY c.id ASC LIMIT 1`,
+      [shopId],
     );
     categoryId = catRes.rows[0]?.id;
     assert.ok(categoryId, 'Need at least one category from seed (npm run db:seed)');
@@ -37,7 +48,7 @@ describe('Admin API — products (e2e)', { skip: !hasDb }, () => {
     if (createdProductId != null) {
       await request(app.getHttpServer())
         .delete(`${API}/products/${createdProductId}`)
-        .set(bearerHeaders(token))
+        .set(sellerHeaders(token, shopId))
         .catch(() => undefined);
     }
     await app?.close();
@@ -50,7 +61,7 @@ describe('Admin API — products (e2e)', { skip: !hasDb }, () => {
   test('GET /products — 200 paginated', async () => {
     const res = await request(app.getHttpServer())
       .get(`${API}/products?page=1&limit=10`)
-      .set(bearerHeaders(token))
+      .set(sellerHeaders(token, shopId))
       .expect(200);
 
     assert.equal(res.body.success, true);
@@ -62,7 +73,7 @@ describe('Admin API — products (e2e)', { skip: !hasDb }, () => {
     const slug = `e2e-product-${Date.now()}`;
     const createRes = await request(app.getHttpServer())
       .post(`${API}/products`)
-      .set(bearerHeaders(token))
+      .set(sellerHeaders(token, shopId))
       .send({
         name_en: 'E2E Test Product',
         name_vi: 'Sản phẩm test E2E',
@@ -80,7 +91,7 @@ describe('Admin API — products (e2e)', { skip: !hasDb }, () => {
 
     const detailRes = await request(app.getHttpServer())
       .get(`${API}/products/${createdProductId}`)
-      .set(bearerHeaders(token))
+      .set(sellerHeaders(token, shopId))
       .expect(200);
 
     assert.equal(detailRes.body.data.id, createdProductId);
@@ -89,7 +100,7 @@ describe('Admin API — products (e2e)', { skip: !hasDb }, () => {
 
     const planRes = await request(app.getHttpServer())
       .post(`${API}/products/${createdProductId}/plans`)
-      .set(bearerHeaders(token))
+      .set(sellerHeaders(token, shopId))
       .send({ slug: 'basic', name_en: 'Basic', name_vi: 'Cơ bản' })
       .expect(201);
 
@@ -97,7 +108,7 @@ describe('Admin API — products (e2e)', { skip: !hasDb }, () => {
 
     const variantRes = await request(app.getHttpServer())
       .post(`${API}/products/${createdProductId}/variants`)
-      .set(bearerHeaders(token))
+      .set(sellerHeaders(token, shopId))
       .send({
         plan_id: planId,
         name_en: '1 Month',
@@ -113,7 +124,7 @@ describe('Admin API — products (e2e)', { skip: !hasDb }, () => {
 
     const tiersRes = await request(app.getHttpServer())
       .put(`${API}/products/variants/${variantId}/volume-tiers`)
-      .set(bearerHeaders(token))
+      .set(sellerHeaders(token, shopId))
       .send({
         tiers: [
           { min_quantity: 2, discount_bps: 100, is_active: true },
@@ -126,7 +137,7 @@ describe('Admin API — products (e2e)', { skip: !hasDb }, () => {
 
     const inStockVariantRes = await request(app.getHttpServer())
       .post(`${API}/products/${createdProductId}/variants`)
-      .set(bearerHeaders(token))
+      .set(sellerHeaders(token, shopId))
       .send({
         name_en: 'Stock tier',
         name_vi: 'Co kho',
@@ -141,7 +152,7 @@ describe('Admin API — products (e2e)', { skip: !hasDb }, () => {
 
     await request(app.getHttpServer())
       .post(`${API}/stock`)
-      .set(bearerHeaders(token))
+      .set(sellerHeaders(token, shopId))
       .send({
         variant_id: inStockVariantId,
         payloads: 'line-one\nline-two',
@@ -150,13 +161,13 @@ describe('Admin API — products (e2e)', { skip: !hasDb }, () => {
 
     await request(app.getHttpServer())
       .put(`${API}/products/variants/${inStockVariantId}`)
-      .set(bearerHeaders(token))
+      .set(sellerHeaders(token, shopId))
       .send({ fulfillment_type: 'PREORDER' })
       .expect(400);
 
     await request(app.getHttpServer())
       .delete(`${API}/products/${createdProductId}`)
-      .set(bearerHeaders(token))
+      .set(sellerHeaders(token, shopId))
       .expect(200);
 
     createdProductId = null;
