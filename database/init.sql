@@ -259,6 +259,7 @@ CREATE TABLE shop_payment_credentials (
   encrypted_payload TEXT NOT NULL,
   public_payload JSONB NOT NULL DEFAULT '{}'::jsonb,
   status shop_payment_credential_status_enum NOT NULL DEFAULT 'ACTIVE',
+  priority INT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT shop_payment_credentials_method_chk CHECK (
@@ -270,9 +271,9 @@ CREATE TABLE shop_payment_credentials (
     OR (payment_method = 'CRYPTO' AND provider = 'CRYPTO')
   )
 );
-CREATE UNIQUE INDEX ux_shop_payment_credentials_active_method
-  ON shop_payment_credentials(shop_id, payment_method)
-  WHERE status = 'ACTIVE';
+-- One credential row per (shop, method); on/off is expressed via status, not row count.
+CREATE UNIQUE INDEX ux_shop_payment_credentials_method
+  ON shop_payment_credentials(shop_id, payment_method);
 
 CREATE TABLE user_shop_balances (
   user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,

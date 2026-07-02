@@ -3,7 +3,7 @@
 import { useLanguage } from "@/lib/i18n/use-language";
 import { BotSettingsCard } from "./components/bot-settings-card";
 import { PasswordCard } from "./components/password-card";
-import { PaymentCredentialsCard } from "./components/payment-credentials-card";
+import { PaymentMethodsCard } from "./components/payment-methods-card";
 import { SettingsNotices } from "./components/settings-notices";
 import { ShopProfileCard } from "./components/shop-profile-card";
 import { useShopSettings } from "./settings.hooks";
@@ -40,12 +40,7 @@ export default function AdminSettingsPage() {
         />
       </div>
 
-      <PaymentCredentialsCard
-        t={t}
-        shop={settings.shop}
-        credentials={settings.credentials}
-        form={settings.credentialForm}
-      />
+      <PaymentMethodsCard t={t} />
       <PasswordCard t={t} form={settings.passwordForm} />
     </div>
   );

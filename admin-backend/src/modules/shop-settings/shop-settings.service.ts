@@ -4,11 +4,17 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { createCipheriv, createHash, randomBytes } from "node:crypto";
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  randomBytes,
+} from "node:crypto";
 import { getPgPool } from "../../common/database/pg-pool";
 import { ErrorCodes } from "../../common/enums/error-codes.enum";
 import { CurrentShop } from "../tenant/types/current-shop";
 import {
+  ReorderPaymentCredentialsDto,
   ShopPaymentMethod,
   ShopPaymentProvider,
   UpdateTelegramBotDto,
@@ -32,10 +38,16 @@ type CredentialRow = {
   provider: ShopPaymentProvider;
   display_name: string;
   public_payload: Record<string, unknown>;
+  encrypted_payload: string;
   status: string;
+  priority: number;
   created_at: Date;
   updated_at: Date;
 };
+
+const CREDENTIAL_RETURNING = `id, shop_id::text, payment_method::text AS payment_method,
+        provider::text AS provider, display_name, public_payload, encrypted_payload,
+        status::text AS status, priority, created_at, updated_at`;
 
 @Injectable()
 export class ShopSettingsService {
@@ -120,23 +132,16 @@ export class ShopSettingsService {
     this.assertCurrentShop(currentShop, shopId);
 
     const result = await this.pool.query<CredentialRow>(
-      `SELECT
-          id,
-          shop_id::text,
-          payment_method::text AS payment_method,
-          provider::text AS provider,
-          display_name,
-          public_payload,
-          status::text AS status,
-          created_at,
-          updated_at
+      `SELECT ${CREDENTIAL_RETURNING}
        FROM shop_payment_credentials
        WHERE shop_id = $1::uuid
-       ORDER BY payment_method ASC, status ASC, id ASC`,
+       ORDER BY priority ASC, payment_method ASC, id ASC`,
       [shopId],
     );
 
-    return { credentials: result.rows.map(this.toCredentialResponse) };
+    return {
+      credentials: result.rows.map((row) => this.toCredentialResponse(row)),
+    };
   }
 
   async upsertPaymentCredential(
@@ -148,48 +153,77 @@ export class ShopSettingsService {
     this.assertManager(currentShop);
     this.assertPaymentProvider(dto.payment_method, dto.provider);
 
+    const secret = dto.payload ?? {};
+    const hasSecret = Object.keys(secret).length > 0;
+    const status = dto.enabled === false ? "DISABLED" : "ACTIVE";
+    const displayName =
+      dto.display_name?.trim() || this.defaultDisplayName(dto.payment_method);
+
+    const result = await this.pool.query<CredentialRow>(
+      `INSERT INTO shop_payment_credentials (
+          shop_id, payment_method, provider, display_name,
+          encrypted_payload, public_payload, status, priority
+       )
+       VALUES (
+          $1::uuid, $2::product_payment_method_enum, $3::shop_payment_provider_enum,
+          $4, $5, $6::jsonb, $7::shop_payment_credential_status_enum, $8
+       )
+       ON CONFLICT (shop_id, payment_method) DO UPDATE SET
+          provider = EXCLUDED.provider,
+          display_name = EXCLUDED.display_name,
+          encrypted_payload = CASE WHEN $9::boolean
+             THEN EXCLUDED.encrypted_payload
+             ELSE shop_payment_credentials.encrypted_payload END,
+          public_payload = EXCLUDED.public_payload,
+          status = EXCLUDED.status,
+          priority = EXCLUDED.priority,
+          updated_at = NOW()
+       RETURNING ${CREDENTIAL_RETURNING}`,
+      [
+        shopId,
+        dto.payment_method,
+        dto.provider,
+        displayName,
+        this.encryptJson(secret),
+        JSON.stringify(dto.public_payload ?? {}),
+        status,
+        dto.priority ?? 0,
+        hasSecret,
+      ],
+    );
+
+    return this.toCredentialResponse(result.rows[0]);
+  }
+
+  async reorderPaymentCredentials(
+    currentShop: CurrentShop,
+    shopId: string,
+    dto: ReorderPaymentCredentialsDto,
+  ) {
+    this.assertCurrentShop(currentShop, shopId);
+    this.assertManager(currentShop);
+
     const client = await this.pool.connect();
     try {
       await client.query("BEGIN");
-      await client.query(
-        `UPDATE shop_payment_credentials
-         SET status = 'DISABLED', updated_at = NOW()
-         WHERE shop_id = $1::uuid
-           AND payment_method = $2::product_payment_method_enum
-           AND status = 'ACTIVE'`,
-        [shopId, dto.payment_method],
-      );
-
-      const result = await client.query<CredentialRow>(
-        `INSERT INTO shop_payment_credentials (
-            shop_id, payment_method, provider, display_name,
-            encrypted_payload, public_payload, status
-         )
-         VALUES (
-            $1::uuid, $2::product_payment_method_enum, $3::shop_payment_provider_enum,
-            $4, $5, $6::jsonb, 'ACTIVE'
-         )
-         RETURNING id, shop_id::text, payment_method::text AS payment_method,
-                   provider::text AS provider, display_name, public_payload,
-                   status::text AS status, created_at, updated_at`,
-        [
-          shopId,
-          dto.payment_method,
-          dto.provider,
-          dto.display_name.trim(),
-          this.encryptJson(dto.payload),
-          JSON.stringify(dto.public_payload ?? {}),
-        ],
-      );
-
+      for (let index = 0; index < dto.order.length; index += 1) {
+        await client.query(
+          `UPDATE shop_payment_credentials
+           SET priority = $3, updated_at = NOW()
+           WHERE shop_id = $1::uuid
+             AND payment_method = $2::product_payment_method_enum`,
+          [shopId, dto.order[index], index],
+        );
+      }
       await client.query("COMMIT");
-      return this.toCredentialResponse(result.rows[0]);
     } catch (error) {
       await client.query("ROLLBACK");
       throw error;
     } finally {
       client.release();
     }
+
+    return this.listPaymentCredentials(currentShop, shopId);
   }
 
   async disablePaymentCredential(
@@ -205,9 +239,7 @@ export class ShopSettingsService {
        SET status = 'DISABLED', updated_at = NOW()
        WHERE id = $1
          AND shop_id = $2::uuid
-       RETURNING id, shop_id::text, payment_method::text AS payment_method,
-                 provider::text AS provider, display_name, public_payload,
-                 status::text AS status, created_at, updated_at`,
+       RETURNING ${CREDENTIAL_RETURNING}`,
       [credentialId, shopId],
     );
 
@@ -256,6 +288,14 @@ export class ShopSettingsService {
     }
   }
 
+  private defaultDisplayName(method: ShopPaymentMethod): string {
+    return method === "CRYPTO"
+      ? "Crypto wallet"
+      : method === "BINANCE"
+        ? "Binance Pay"
+        : "Bank transfer";
+  }
+
   private encryptJson(value: Record<string, unknown>): string {
     const iv = randomBytes(12);
     const cipher = createCipheriv("aes-256-gcm", this.encryptionKey(), iv);
@@ -270,6 +310,27 @@ export class ShopSettingsService {
       tag.toString("base64url"),
       ciphertext.toString("base64url"),
     ].join(":");
+  }
+
+  private decryptJson(value: string | null | undefined): Record<string, unknown> {
+    if (!value) return {};
+    try {
+      const [version, ivPart, tagPart, cipherPart] = value.split(":");
+      if (version !== "v1") return {};
+      const decipher = createDecipheriv(
+        "aes-256-gcm",
+        this.encryptionKey(),
+        Buffer.from(ivPart, "base64url"),
+      );
+      decipher.setAuthTag(Buffer.from(tagPart, "base64url"));
+      const plain = Buffer.concat([
+        decipher.update(Buffer.from(cipherPart, "base64url")),
+        decipher.final(),
+      ]);
+      return JSON.parse(plain.toString("utf8")) as Record<string, unknown>;
+    } catch {
+      return {};
+    }
   }
 
   private encryptionKey(): Buffer {
@@ -307,7 +368,8 @@ export class ShopSettingsService {
       display_name: row.display_name,
       public_payload: row.public_payload,
       status: row.status,
-      has_payload: true,
+      priority: row.priority,
+      has_secret: Object.keys(this.decryptJson(row.encrypted_payload)).length > 0,
       created_at: row.created_at,
       updated_at: row.updated_at,
     };

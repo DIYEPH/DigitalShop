@@ -3,12 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAdminToken } from "@/lib/auth/use-admin-token";
 import { getActiveShopId } from "@/lib/shop-context";
-import { DEFAULT_JSON, defaultProviderFor } from "./settings.constants";
 import { settingsService } from "./settings.service";
 import type {
-  PaymentCredential,
-  PaymentMethod,
-  PaymentProvider,
   SellerShop,
   TelegramBotSettings,
   Translator,
@@ -18,7 +14,6 @@ export function useShopSettings(t: Translator) {
   const token = useAdminToken();
   const [shop, setShop] = useState<SellerShop | null>(null);
   const [bot, setBot] = useState<TelegramBotSettings | null>(null);
-  const [credentials, setCredentials] = useState<PaymentCredential[]>([]);
   const [loading, setLoading] = useState(false);
 
   const [shopName, setShopName] = useState("");
@@ -29,14 +24,6 @@ export function useShopSettings(t: Translator) {
   const [botToken, setBotToken] = useState("");
   const [botUsername, setBotUsername] = useState("");
   const [savingBot, setSavingBot] = useState(false);
-
-  const [paymentMethod, setPaymentMethodState] =
-    useState<PaymentMethod>("BINANCE");
-  const [provider, setProvider] = useState<PaymentProvider>("BINANCE");
-  const [credentialName, setCredentialName] = useState("");
-  const [publicPayload, setPublicPayload] = useState(DEFAULT_JSON);
-  const [secretPayload, setSecretPayload] = useState(DEFAULT_JSON);
-  const [savingCredential, setSavingCredential] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -59,9 +46,8 @@ export function useShopSettings(t: Translator) {
     Promise.all([
       settingsService.listShops(token),
       settingsService.getBot(token, shopId),
-      settingsService.listCredentials(token, shopId),
     ])
-      .then(([shopResult, botResult, credentialResult]) => {
+      .then(([shopResult, botResult]) => {
         if (cancelled) return;
         const selected =
           shopResult.shops.find((item) => item.id === shopId) ?? null;
@@ -71,7 +57,6 @@ export function useShopSettings(t: Translator) {
         setSupportUrl(selected?.support_url ?? "");
         setBot(botResult);
         setBotUsername(botResult.bot_username ?? "");
-        setCredentials(credentialResult.credentials);
       })
       .catch((err) => {
         if (!cancelled) setError(messageFromError(err));
@@ -93,11 +78,6 @@ export function useShopSettings(t: Translator) {
       newPassword === confirmPassword,
     [currentPassword, newPassword, confirmPassword],
   );
-
-  const setPaymentMethod = (method: PaymentMethod) => {
-    setPaymentMethodState(method);
-    setProvider(defaultProviderFor(method));
-  };
 
   const runAction = async (
     setBusy: (value: boolean) => void,
@@ -141,25 +121,6 @@ export function useShopSettings(t: Translator) {
     });
   };
 
-  const saveCredential = async () => {
-    if (!token || !shop) return;
-    runAction(setSavingCredential, async () => {
-      await settingsService.upsertCredential(token, shop.id, {
-        payment_method: paymentMethod,
-        provider,
-        display_name: credentialName,
-        public_payload: parseJsonObject(publicPayload, t),
-        payload: parseJsonObject(secretPayload, t),
-      });
-      const refreshed = await settingsService.listCredentials(token, shop.id);
-      setCredentials(refreshed.credentials);
-      setCredentialName("");
-      setPublicPayload(DEFAULT_JSON);
-      setSecretPayload(DEFAULT_JSON);
-      setSuccess(t("settings.savedCredential"));
-    });
-  };
-
   const savePassword = async () => {
     if (!token) {
       setError(t("errors.sessionExpired"));
@@ -186,7 +147,6 @@ export function useShopSettings(t: Translator) {
   return {
     shop,
     bot,
-    credentials,
     loading,
     notices: {
       error,
@@ -212,20 +172,6 @@ export function useShopSettings(t: Translator) {
       savingBot,
       saveBot,
     },
-    credentialForm: {
-      paymentMethod,
-      setPaymentMethod,
-      provider,
-      setProvider,
-      credentialName,
-      setCredentialName,
-      publicPayload,
-      setPublicPayload,
-      secretPayload,
-      setSecretPayload,
-      savingCredential,
-      saveCredential,
-    },
     passwordForm: {
       currentPassword,
       setCurrentPassword,
@@ -238,21 +184,6 @@ export function useShopSettings(t: Translator) {
       savePassword,
     },
   };
-}
-
-function parseJsonObject(
-  value: string,
-  t: Translator,
-): Record<string, unknown> {
-  try {
-    const parsed = JSON.parse(value);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      throw new Error(t("errors.invalidJson"));
-    }
-    return parsed as Record<string, unknown>;
-  } catch {
-    throw new Error(t("errors.invalidJson"));
-  }
 }
 
 function messageFromError(error: unknown): string {

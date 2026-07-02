@@ -3,7 +3,11 @@ import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { WebJwtGuard } from '../../common/guards/web-jwt.guard';
 import { AuthUser } from '../auth/types/auth-user';
-import { ListOrdersQueryDto, OrderCheckoutDto } from './dto/orders.dto';
+import {
+  ListOrdersQueryDto,
+  OrderCheckoutDto,
+  PostOrderMessageDto,
+} from './dto/orders.dto';
 import { OrdersService } from './orders.service';
 
 @Controller('orders')
@@ -46,5 +50,20 @@ export class OrdersController {
   @Post(':id/cancel')
   cancel(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.ordersService.cancel(user.id, id);
+  }
+
+  @Get(':id/messages')
+  listMessages(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.ordersService.listMessages(user.id, id);
+  }
+
+  @Post(':id/messages')
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  postMessage(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: PostOrderMessageDto,
+  ) {
+    return this.ordersService.postMessage(user.id, id, dto);
   }
 }
