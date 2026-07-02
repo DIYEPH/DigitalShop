@@ -2,6 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { Pool } from 'pg';
 import { ApiException } from '../../../../../shared/errors/api.exception';
 import {
+  assertShopCustomerNotBanned,
+  upsertShopCustomer,
+} from '../../../../../shared/infrastructure/shop-customer';
+import {
   BindReferralResult,
   ReferralListItem,
   ReferralMeSnapshot,
@@ -35,7 +39,10 @@ export class PgReferralRepository implements ReferralRepository {
     return result.rows[0]?.id ?? null;
   }
 
-  async getReferralMeByTelegramId(telegramId: number): Promise<ReferralMeSnapshot | null> {
+  async getReferralMeByTelegramId(
+    shopId: string,
+    telegramId: number,
+  ): Promise<ReferralMeSnapshot | null> {
     const result = await this.pool.query<{
       referral_code: string;
       referred_by_user_id: number | null;
@@ -45,11 +52,16 @@ export class PgReferralRepository implements ReferralRepository {
     }>(
       `SELECT
           u.referral_code,
-          u.referred_by_user_id,
-          (SELECT COUNT(*)::text FROM referrals r WHERE r.referrer_user_id = u.id) AS total_referrals,
+          (SELECT r.referrer_user_id FROM referrals r
+            WHERE r.referred_user_id = u.id AND r.shop_id = $2::uuid
+            LIMIT 1) AS referred_by_user_id,
+          (SELECT COUNT(*)::text FROM referrals r
+            WHERE r.referrer_user_id = u.id AND r.shop_id = $2::uuid) AS total_referrals,
           (SELECT COALESCE(SUM(r.referrer_bonus_points), 0)::text
              FROM referrals r
-            WHERE r.referrer_user_id = u.id AND r.referrer_bonus_awarded_at IS NOT NULL) AS total_earned_points,
+            WHERE r.referrer_user_id = u.id
+              AND r.shop_id = $2::uuid
+              AND r.referrer_bonus_awarded_at IS NOT NULL) AS total_earned_points,
           (
             SELECT COALESCE(
               json_agg(
@@ -65,12 +77,12 @@ export class PgReferralRepository implements ReferralRepository {
             )
             FROM referrals r
             INNER JOIN users ru ON ru.id = r.referred_user_id
-            WHERE r.referrer_user_id = u.id
+            WHERE r.referrer_user_id = u.id AND r.shop_id = $2::uuid
           ) AS referrals_json
         FROM users u
         WHERE u.telegram_id = $1
         LIMIT 1`,
-      [telegramId],
+      [telegramId, shopId],
     );
 
     const row = result.rows[0];
@@ -87,6 +99,7 @@ export class PgReferralRepository implements ReferralRepository {
   }
 
   async bindReferralByCode(
+    shopId: string,
     referredUserId: number,
     code: string,
     refereeBonusPoints: number,
@@ -97,15 +110,25 @@ export class PgReferralRepository implements ReferralRepository {
     try {
       await client.query('BEGIN');
 
-      const referredRow = await client.query<{ referred_by_user_id: number | null }>(
-        `SELECT referred_by_user_id FROM users WHERE id = $1 FOR UPDATE`,
+      await assertShopCustomerNotBanned(client, shopId, referredUserId);
+      await upsertShopCustomer(client, shopId, referredUserId);
+
+      const referredRow = await client.query<{ id: number }>(
+        `SELECT id FROM users WHERE id = $1 FOR UPDATE`,
         [referredUserId],
       );
       if (!referredRow.rows[0]) {
         await client.query('ROLLBACK');
         return null;
       }
-      if (referredRow.rows[0].referred_by_user_id != null) {
+
+      const existingBind = await client.query(
+        `SELECT 1 FROM referrals
+          WHERE referred_user_id = $1 AND shop_id = $2::uuid
+          LIMIT 1`,
+        [referredUserId, shopId],
+      );
+      if ((existingBind.rowCount ?? 0) > 0) {
         throw new ApiException('referral_already_bound', 'Referral code already bound.', 400);
       }
 
@@ -131,26 +154,29 @@ export class PgReferralRepository implements ReferralRepository {
       try {
         await client.query(
           `INSERT INTO referrals (
+             shop_id,
              referrer_user_id,
              referred_user_id,
              referee_bonus_points,
              referrer_bonus_points,
              referrer_bonus_awarded_at
            )
-           VALUES ($1, $2, $3, $4, NOW())`,
-          [referrer.id, referredUserId, refereeBonusPoints, referrerBonusPoints],
+           VALUES ($1::uuid, $2, $3, $4, $5, NOW())`,
+          [shopId, referrer.id, referredUserId, refereeBonusPoints, referrerBonusPoints],
         );
       } catch (err) {
         rethrowReferralBindError(err);
       }
 
+      // Keep the legacy global pointer for the web flow: only the first bind wins.
       await client.query(
-        `UPDATE users SET referred_by_user_id = $2, updated_at = NOW() WHERE id = $1`,
+        `UPDATE users SET referred_by_user_id = $2, updated_at = NOW()
+          WHERE id = $1 AND referred_by_user_id IS NULL`,
         [referredUserId, referrer.id],
       );
 
-      const balancePoint = await creditUserPoints(client, referredUserId, refereeBonusPoints);
-      await creditUserPoints(client, referrer.id, referrerBonusPoints);
+      const balancePoint = await creditUserPoints(client, shopId, referredUserId, refereeBonusPoints);
+      await creditUserPoints(client, shopId, referrer.id, referrerBonusPoints);
 
       await client.query('COMMIT');
 

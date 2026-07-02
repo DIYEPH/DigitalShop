@@ -4,6 +4,7 @@ import {
   listShops,
   updateShop,
   updateTelegramBotSettings,
+  updateTelegramBotStatus,
 } from "@/lib/api/shops";
 
 export const settingsService = {
@@ -20,6 +21,8 @@ export const settingsService = {
     shopId: string,
     input: { bot_token: string; bot_username?: string },
   ) => updateTelegramBotSettings(token, shopId, input),
+  setBotStatus: (token: string, shopId: string, status: "ACTIVE" | "SUSPENDED") =>
+    updateTelegramBotStatus(token, shopId, status),
   changePassword: (token: string, current: string, next: string) =>
     changePassword(token, current, next),
 };

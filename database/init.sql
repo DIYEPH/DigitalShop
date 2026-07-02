@@ -62,8 +62,7 @@ CREATE TABLE referrals (
   referrer_bonus_points INT NULL,
   referee_awarded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   referrer_bonus_awarded_at TIMESTAMPTZ NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE (referred_user_id)
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX idx_referrals_referrer_user_id ON referrals(referrer_user_id);
 
@@ -82,8 +81,7 @@ CREATE TABLE daily_login_point_claims (
   user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   claim_date DATE NOT NULL,
   points_awarded INT NOT NULL CHECK (points_awarded > 0),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE (user_id, claim_date)
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX idx_daily_login_point_claims_user_id_created_at ON daily_login_point_claims(user_id, created_at DESC);
 
@@ -125,6 +123,27 @@ CREATE TABLE shop_members (
 );
 CREATE INDEX idx_shop_members_user_id ON shop_members(user_id);
 CREATE INDEX idx_shop_members_shop_role ON shop_members(shop_id, role);
+
+-- Loyalty tables are shop-scoped for bot flows. NULL shop_id = legacy/global
+-- web flow (backend-web me/points is not shop-scoped yet).
+ALTER TABLE point_transactions
+  ADD COLUMN shop_id UUID NULL REFERENCES shops(id) ON DELETE CASCADE;
+CREATE INDEX idx_point_transactions_shop_user
+  ON point_transactions(shop_id, user_id);
+
+ALTER TABLE daily_login_point_claims
+  ADD COLUMN shop_id UUID NULL REFERENCES shops(id) ON DELETE CASCADE;
+CREATE UNIQUE INDEX ux_daily_login_claims_global
+  ON daily_login_point_claims(user_id, claim_date) WHERE shop_id IS NULL;
+CREATE UNIQUE INDEX ux_daily_login_claims_shop
+  ON daily_login_point_claims(shop_id, user_id, claim_date) WHERE shop_id IS NOT NULL;
+
+ALTER TABLE referrals
+  ADD COLUMN shop_id UUID NULL REFERENCES shops(id) ON DELETE CASCADE;
+CREATE UNIQUE INDEX ux_referrals_global_referred
+  ON referrals(referred_user_id) WHERE shop_id IS NULL;
+CREATE UNIQUE INDEX ux_referrals_shop_referred
+  ON referrals(shop_id, referred_user_id) WHERE shop_id IS NOT NULL;
 
 -- ---------------------------------------------------------------------------
 -- Shared category tree
@@ -285,11 +304,12 @@ CREATE TABLE user_shop_balances (
   shop_id UUID NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
   balance_usdt NUMERIC(36, 18) NOT NULL DEFAULT 0,
   balance_vnd NUMERIC(36, 18) NOT NULL DEFAULT 0,
+  balance_point NUMERIC(36, 18) NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (user_id, shop_id),
   CONSTRAINT user_shop_balances_non_negative_chk CHECK (
-    balance_usdt >= 0 AND balance_vnd >= 0
+    balance_usdt >= 0 AND balance_vnd >= 0 AND balance_point >= 0
   )
 );
 CREATE INDEX idx_user_shop_balances_shop_id ON user_shop_balances(shop_id);
@@ -300,6 +320,9 @@ CREATE TABLE telegram_bots (
   bot_username TEXT NULL,
   bot_token_encrypted TEXT NULL,
   secret_hash TEXT NOT NULL UNIQUE,
+  -- Same secret, encrypted at rest, so the platform can launch a bot runner
+  -- instance per shop without asking the seller for the secret again.
+  secret_encrypted TEXT NULL,
   status shop_status_enum NOT NULL DEFAULT 'ACTIVE',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

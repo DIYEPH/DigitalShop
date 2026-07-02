@@ -24,6 +24,7 @@ export function useShopSettings(t: Translator) {
   const [botToken, setBotToken] = useState("");
   const [botUsername, setBotUsername] = useState("");
   const [savingBot, setSavingBot] = useState(false);
+  const [togglingBot, setTogglingBot] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -121,6 +122,18 @@ export function useShopSettings(t: Translator) {
     });
   };
 
+  const toggleBotStatus = async () => {
+    if (!token || !shop || !bot?.configured) return;
+    const nextStatus = bot.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE";
+    runAction(setTogglingBot, async () => {
+      const updated = await settingsService.setBotStatus(token, shop.id, nextStatus);
+      setBot(updated);
+      setSuccess(
+        nextStatus === "ACTIVE" ? t("settings.botEnabled") : t("settings.botDisabled"),
+      );
+    });
+  };
+
   const savePassword = async () => {
     if (!token) {
       setError(t("errors.sessionExpired"));
@@ -171,6 +184,8 @@ export function useShopSettings(t: Translator) {
       setBotUsername,
       savingBot,
       saveBot,
+      togglingBot,
+      toggleBotStatus,
     },
     passwordForm: {
       currentPassword,

@@ -16,13 +16,13 @@ export class GetTopupStatusUseCase {
     private readonly processBankTopup: ProcessBankTelegramTopupUseCase,
   ) {}
 
-  async execute(topupId: number, telegramId: number): Promise<TelegramTopupStatusDto> {
+  async execute(shopId: string, topupId: number, telegramId: number): Promise<TelegramTopupStatusDto> {
     const userId = await this.topupRepository.findUserIdByTelegramId(telegramId);
     if (!userId) {
       throw new ApiException('user_not_found', 'Telegram user is not linked yet.', 404);
     }
 
-    let topup = await this.topupRepository.findTopupById(topupId, userId);
+    let topup = await this.topupRepository.findTopupById(shopId, topupId, userId);
     if (!topup) {
       throw new ApiException('topup_not_found', 'Topup not found.', 404);
     }
@@ -33,7 +33,7 @@ export class GetTopupStatusUseCase {
       } else if (topup.provider === 'BANK') {
         await this.processBankTopup.execute(topup);
       }
-      topup = (await this.topupRepository.findTopupById(topupId, userId)) ?? topup;
+      topup = (await this.topupRepository.findTopupById(shopId, topupId, userId)) ?? topup;
     }
 
     return mapTopupStatusResponse(topup);

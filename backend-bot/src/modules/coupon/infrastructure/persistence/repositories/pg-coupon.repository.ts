@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { ApiException } from '../../../../../shared/errors/api.exception';
+import {
+  assertShopCustomerNotBanned,
+  upsertShopCustomer,
+} from '../../../../../shared/infrastructure/shop-customer';
 import { COUPON_REDEMPTION_STATUSES, CouponRow } from '../../../../order/domain/order-pricing';
 import { ShopCouponRow } from '../../../domain/entities/shop-coupon-row.entity';
 import { UserCouponWalletRow } from '../../../domain/entities/user-coupon-wallet-row.entity';
@@ -55,10 +59,11 @@ export class PgCouponRepository implements CouponRepository {
         INNER JOIN product_variants pv ON pv.id = c.variant_id
         INNER JOIN products p ON p.id = pv.product_id
         WHERE uc.user_id = $1
+          AND c.shop_id = $3::uuid
           AND ${usedFilter}
           AND ($2::int IS NULL OR c.variant_id = $2)
         ORDER BY uc.purchased_at DESC, uc.id DESC`,
-      [params.userId, params.variantId ?? null],
+      [params.userId, params.variantId ?? null, params.shopId],
     );
 
     return result.rows.map((row) => ({
@@ -72,7 +77,7 @@ export class PgCouponRepository implements CouponRepository {
     }));
   }
 
-  async listShopCoupons(): Promise<ShopCouponRow[]> {
+  async listShopCoupons(shopId: string): Promise<ShopCouponRow[]> {
     const result = await this.pool.query<
       CouponDbRow & {
         product_name_en: string;
@@ -90,10 +95,12 @@ export class PgCouponRepository implements CouponRepository {
         FROM coupons c
         INNER JOIN product_variants pv ON pv.id = c.variant_id AND pv.is_active = TRUE
         INNER JOIN products p ON p.id = pv.product_id
-        WHERE c.requires_ownership = TRUE
+        WHERE c.shop_id = $1::uuid
+          AND c.requires_ownership = TRUE
           AND c.cost_point > 0
           AND c.is_active = TRUE
         ORDER BY c.cost_point ASC, c.code ASC`,
+      [shopId],
     );
 
     return result.rows.map((row) => ({
@@ -105,19 +112,20 @@ export class PgCouponRepository implements CouponRepository {
     }));
   }
 
-  async findCouponByCode(code: string): Promise<CouponRow | null> {
+  async findCouponByCode(shopId: string, code: string): Promise<CouponRow | null> {
     const result = await this.pool.query<CouponDbRow>(
       `SELECT ${COUPON_SELECT}
         FROM coupons c
-        WHERE UPPER(c.code) = UPPER($1)
+        WHERE UPPER(c.code) = UPPER($1) AND c.shop_id = $2::uuid
         LIMIT 1`,
-      [code.trim()],
+      [code.trim(), shopId],
     );
     const row = result.rows[0];
     return row ? mapCouponRow(row) : null;
   }
 
   async findUserCouponById(
+    shopId: string,
     userCouponId: number,
     userId: number,
   ): Promise<UserCouponWalletRow | null> {
@@ -143,9 +151,9 @@ export class PgCouponRepository implements CouponRepository {
         INNER JOIN coupons c ON c.id = uc.coupon_id
         INNER JOIN product_variants pv ON pv.id = c.variant_id
         INNER JOIN products p ON p.id = pv.product_id
-        WHERE uc.id = $1 AND uc.user_id = $2
+        WHERE uc.id = $1 AND uc.user_id = $2 AND c.shop_id = $3::uuid
         LIMIT 1`,
-      [userCouponId, userId],
+      [userCouponId, userId, shopId],
     );
     const row = result.rows[0];
     if (!row) return null;
@@ -161,6 +169,7 @@ export class PgCouponRepository implements CouponRepository {
   }
 
   async findUnusedUserCouponByCode(
+    shopId: string,
     userId: number,
     code: string,
   ): Promise<UserCouponWalletRow | null> {
@@ -188,10 +197,11 @@ export class PgCouponRepository implements CouponRepository {
         INNER JOIN products p ON p.id = pv.product_id
         WHERE uc.user_id = $1
           AND UPPER(c.code) = UPPER($2)
+          AND c.shop_id = $3::uuid
           AND uc.used_at IS NULL
         ORDER BY uc.id ASC
         LIMIT 1`,
-      [userId, code.trim()],
+      [userId, code.trim(), shopId],
     );
     const row = result.rows[0];
     if (!row) return null;
@@ -206,17 +216,24 @@ export class PgCouponRepository implements CouponRepository {
     };
   }
 
-  async redeemShopCoupon(userId: number, code: string): Promise<{ userCouponId: number }> {
+  async redeemShopCoupon(
+    shopId: string,
+    userId: number,
+    code: string,
+  ): Promise<{ userCouponId: number }> {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
 
+      await assertShopCustomerNotBanned(client, shopId, userId);
+      await upsertShopCustomer(client, shopId, userId);
+
       const couponResult = await client.query<CouponDbRow & { cost_point: number }>(
         `SELECT ${COUPON_SELECT}, c.cost_point
           FROM coupons c
-          WHERE UPPER(c.code) = UPPER($1)
+          WHERE UPPER(c.code) = UPPER($1) AND c.shop_id = $2::uuid
           FOR UPDATE`,
-        [code.trim()],
+        [code.trim(), shopId],
       );
       const row = couponResult.rows[0];
       if (!row || !row.is_active) {
@@ -228,8 +245,11 @@ export class PgCouponRepository implements CouponRepository {
 
       const costPoint = Number(row.cost_point);
       const balanceResult = await client.query<{ balance_point: string }>(
-        `SELECT balance_point::text FROM users WHERE id = $1 FOR UPDATE`,
-        [userId],
+        `SELECT balance_point::text
+          FROM user_shop_balances
+          WHERE user_id = $1 AND shop_id = $2::uuid
+          FOR UPDATE`,
+        [userId, shopId],
       );
       const balance = Number(balanceResult.rows[0]?.balance_point ?? 0);
       if (balance < costPoint) {
@@ -241,8 +261,10 @@ export class PgCouponRepository implements CouponRepository {
       }
 
       await client.query(
-        `UPDATE users SET balance_point = balance_point - $2, updated_at = NOW() WHERE id = $1`,
-        [userId, costPoint],
+        `UPDATE user_shop_balances
+          SET balance_point = balance_point - $3, updated_at = NOW()
+          WHERE user_id = $1 AND shop_id = $2::uuid`,
+        [userId, shopId, costPoint],
       );
 
       const insert = await client.query<{ id: number }>(

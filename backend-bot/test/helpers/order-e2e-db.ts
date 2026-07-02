@@ -127,6 +127,17 @@ export async function restoreSeedVariantPaymentMethods(pool: Pool, variantId: nu
   await setVariantPaymentMethods(pool, variantId, SEED_PAYMENT_METHODS);
 }
 
+/** E2E runs against the default seed shop (the e2e bot secret maps to it). */
+export async function getDefaultShopId(pool: Pool): Promise<string> {
+  const result = await pool.query<{ id: string }>(
+    `SELECT id::text AS id FROM shops WHERE slug = 'default' LIMIT 1`,
+  );
+  const id = result.rows[0]?.id;
+  if (!id) throw new Error('Default shop is missing — run db:fresh before e2e.');
+  return id;
+}
+
+/** Sets user_shop_balances for the default shop (wallets are per-shop). */
 export async function setUserBalance(
   pool: Pool,
   telegramId: number,
@@ -134,8 +145,15 @@ export async function setUserBalance(
   balanceVnd: number,
 ): Promise<void> {
   await pool.query(
-    `UPDATE users SET balance_usdt = $2, balance_vnd = $3, updated_at = NOW()
-      WHERE telegram_id = $1`,
+    `INSERT INTO user_shop_balances (user_id, shop_id, balance_usdt, balance_vnd, balance_point)
+      SELECT u.id, s.id, $2, $3, 0
+      FROM users u
+      CROSS JOIN shops s
+      WHERE u.telegram_id = $1 AND s.slug = 'default'
+      ON CONFLICT (user_id, shop_id) DO UPDATE SET
+        balance_usdt = EXCLUDED.balance_usdt,
+        balance_vnd = EXCLUDED.balance_vnd,
+        updated_at = NOW()`,
     [telegramId, balanceUsdt, balanceVnd],
   );
 }
@@ -154,24 +172,34 @@ export async function getUserBalance(
   pool: Pool,
   telegramId: number,
 ): Promise<{ balanceUsdt: number; balanceVnd: number } | null> {
-  const result = await pool.query<{ balance_usdt: string; balance_vnd: string }>(
-    `SELECT balance_usdt, balance_vnd FROM users WHERE telegram_id = $1`,
+  const result = await pool.query<{ balance_usdt: string | null; balance_vnd: string | null }>(
+    `SELECT usb.balance_usdt, usb.balance_vnd
+      FROM users u
+      LEFT JOIN user_shop_balances usb
+        ON usb.user_id = u.id
+       AND usb.shop_id = (SELECT id FROM shops WHERE slug = 'default')
+      WHERE u.telegram_id = $1`,
     [telegramId],
   );
   if (!result.rows[0]) return null;
   return {
-    balanceUsdt: Number(result.rows[0].balance_usdt),
-    balanceVnd: Number(result.rows[0].balance_vnd),
+    balanceUsdt: Number(result.rows[0].balance_usdt ?? 0),
+    balanceVnd: Number(result.rows[0].balance_vnd ?? 0),
   };
 }
 
 export async function getUserBalancePoint(pool: Pool, telegramId: number): Promise<number | null> {
-  const result = await pool.query<{ balance_point: string }>(
-    `SELECT balance_point FROM users WHERE telegram_id = $1`,
+  const result = await pool.query<{ balance_point: string | null }>(
+    `SELECT usb.balance_point
+      FROM users u
+      LEFT JOIN user_shop_balances usb
+        ON usb.user_id = u.id
+       AND usb.shop_id = (SELECT id FROM shops WHERE slug = 'default')
+      WHERE u.telegram_id = $1`,
     [telegramId],
   );
   if (!result.rows[0]) return null;
-  return Number(result.rows[0].balance_point);
+  return Number(result.rows[0].balance_point ?? 0);
 }
 
 export async function clearDailyLoginClaimsForTelegram(pool: Pool, telegramId: number): Promise<void> {

@@ -1,5 +1,6 @@
 export interface OrderPaymentEntity {
   orderId: string;
+  shopId: string;
   status: string;
   paymentMethod: string;
   currency: string;

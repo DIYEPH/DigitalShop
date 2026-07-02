@@ -1,11 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { Pool } from 'pg';
 import { ApiException } from '../../../../../shared/errors/api.exception';
+import {
+  assertShopCustomerNotBanned,
+  upsertShopCustomer,
+} from '../../../../../shared/infrastructure/shop-customer';
 import { TopupCurrency, TopupEntity, TopupProvider } from '../../../domain/entities/topup.entity';
 import {
   CreateTopupParams,
   TopupRepository,
 } from '../../../domain/repositories/topup.repository';
+
+const TOPUP_SELECT = `id, shop_id::text, user_id, provider::text, currency::text, amount::float8,
+              payment_code, tx_id, status::text, expires_at, paid_at, created_at`;
 
 @Injectable()
 export class PgTopupRepository implements TopupRepository {
@@ -23,17 +30,17 @@ export class PgTopupRepository implements TopupRepository {
     return result.rows[0]?.id ?? null;
   }
 
-  async findActivePendingTopup(userId: number): Promise<TopupEntity | null> {
+  async findActivePendingTopup(shopId: string, userId: number): Promise<TopupEntity | null> {
     const result = await this.pool.query<TopupRow>(
-      `SELECT id, user_id, provider::text, currency::text, amount::float8,
-              payment_code, tx_id, status::text, expires_at, paid_at, created_at
+      `SELECT ${TOPUP_SELECT}
        FROM balance_topups
        WHERE user_id = $1
+         AND shop_id = $2::uuid
          AND status = 'PENDING'
          AND expires_at > NOW()
        ORDER BY created_at DESC
        LIMIT 1`,
-      [userId],
+      [userId, shopId],
     );
     return result.rows[0] ? mapRow(result.rows[0]) : null;
   }
@@ -46,24 +53,23 @@ export class PgTopupRepository implements TopupRepository {
     return this.insertTopup(params, 'BANK', 'VND');
   }
 
-  async findTopupById(id: number, userId: number): Promise<TopupEntity | null> {
+  async findTopupById(shopId: string, id: number, userId: number): Promise<TopupEntity | null> {
     const result = await this.pool.query<TopupRow>(
-      `SELECT id, user_id, provider::text, currency::text, amount::float8,
-              payment_code, tx_id, status::text, expires_at, paid_at, created_at
+      `SELECT ${TOPUP_SELECT}
        FROM balance_topups
-       WHERE id = $1 AND user_id = $2
+       WHERE id = $1 AND user_id = $2 AND shop_id = $3::uuid
        LIMIT 1`,
-      [id, userId],
+      [id, userId, shopId],
     );
     return result.rows[0] ? mapRow(result.rows[0]) : null;
   }
 
-  async cancelTopup(id: number, userId: number): Promise<boolean> {
+  async cancelTopup(shopId: string, id: number, userId: number): Promise<boolean> {
     const result = await this.pool.query(
       `UPDATE balance_topups
        SET status = 'FAILED', updated_at = NOW()
-       WHERE id = $1 AND user_id = $2 AND status = 'PENDING'`,
-      [id, userId],
+       WHERE id = $1 AND user_id = $2 AND shop_id = $3::uuid AND status = 'PENDING'`,
+      [id, userId, shopId],
     );
     return (result.rowCount ?? 0) > 0;
   }
@@ -108,12 +114,22 @@ export class PgTopupRepository implements TopupRepository {
     provider: TopupProvider,
     currency: TopupCurrency,
   ): Promise<TopupEntity> {
+    await assertShopCustomerNotBanned(this.pool, params.shopId, params.userId);
+    await upsertShopCustomer(this.pool, params.shopId, params.userId);
+
     const result = await this.pool.query<TopupRow>(
-      `INSERT INTO balance_topups (user_id, provider, currency, amount, payment_code, expires_at)
-       VALUES ($1, $2::product_payment_method_enum, $3::currency_enum, $4, $5, $6)
-       RETURNING id, user_id, provider::text, currency::text, amount::float8,
-                 payment_code, tx_id, status::text, expires_at, paid_at, created_at`,
-      [params.userId, provider, currency, params.amount, params.paymentCode, params.expiresAt],
+      `INSERT INTO balance_topups (shop_id, user_id, provider, currency, amount, payment_code, expires_at)
+       VALUES ($1::uuid, $2, $3::product_payment_method_enum, $4::currency_enum, $5, $6, $7)
+       RETURNING ${TOPUP_SELECT}`,
+      [
+        params.shopId,
+        params.userId,
+        provider,
+        currency,
+        params.amount,
+        params.paymentCode,
+        params.expiresAt,
+      ],
     );
     if (!result.rows[0]) {
       throw new ApiException('topup_create_failed', 'Failed to create topup.', 500);
@@ -123,13 +139,12 @@ export class PgTopupRepository implements TopupRepository {
 
   private async listPendingByProvider(provider: TopupProvider): Promise<TopupEntity[]> {
     const result = await this.pool.query<TopupRow>(
-      `SELECT id, user_id, provider::text, currency::text, amount::float8,
-              payment_code, tx_id, status::text, expires_at, paid_at, created_at
+      `SELECT ${TOPUP_SELECT}
        FROM balance_topups
        WHERE status = 'PENDING'
          AND provider = $1::product_payment_method_enum
          AND expires_at > NOW()
-       ORDER BY created_at ASC`,
+       ORDER BY shop_id, created_at ASC`,
       [provider],
     );
     return result.rows.map(mapRow);
@@ -158,13 +173,14 @@ export class PgTopupRepository implements TopupRepository {
               AND tx_id IS NULL
               AND provider = $3::product_payment_method_enum
               AND currency = $4::currency_enum
-            RETURNING user_id, amount
+            RETURNING shop_id, user_id, amount
           )
-          UPDATE users
-          SET ${balanceColumn} = ${balanceColumn} + (SELECT amount FROM confirm),
+          INSERT INTO user_shop_balances (user_id, shop_id, ${balanceColumn})
+          SELECT user_id, shop_id, amount FROM confirm
+          ON CONFLICT (user_id, shop_id) DO UPDATE
+          SET ${balanceColumn} = user_shop_balances.${balanceColumn} + EXCLUDED.${balanceColumn},
               updated_at = NOW()
-          WHERE id = (SELECT user_id FROM confirm)
-          RETURNING id`,
+          RETURNING user_id`,
         [id, txId, provider, currency],
       );
 
@@ -181,6 +197,7 @@ export class PgTopupRepository implements TopupRepository {
 
 interface TopupRow {
   id: number;
+  shop_id: string;
   user_id: number;
   provider: string;
   currency: string;
@@ -196,6 +213,7 @@ interface TopupRow {
 function mapRow(row: TopupRow): TopupEntity {
   return {
     id: Number(row.id),
+    shopId: String(row.shop_id),
     userId: Number(row.user_id),
     provider: row.provider as TopupProvider,
     currency: row.currency as TopupCurrency,

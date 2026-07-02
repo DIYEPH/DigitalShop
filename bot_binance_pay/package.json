@@ -9,7 +9,8 @@
     "dev": "nodemon src/bot.js",
     "bot": "node src/bot.js",
     "lint": "eslint \"src/**/*.js\"",
-    "check:consistency": "node scripts/check-code-consistency.js"
+    "check:consistency": "node scripts/check-code-consistency.js",
+    "check:locales": "node scripts/check-locales.js"
   },
   "author": "DIYEPH",
   "license": "ISC",

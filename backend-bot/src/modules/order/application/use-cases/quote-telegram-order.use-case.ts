@@ -1,12 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ApiException } from '../../../../shared/errors/api.exception';
-import { filterPaymentMethodsForBank } from '../../../../integration/bank/bank-checkout';
-import { SepayGateway } from '../../../../integration/bank/sepay.gateway';
+import { filterPaymentMethodsForShop } from '../../../../integration/bank/bank-checkout';
+import { ShopPaymentGatewaysService } from '../../../../integration/shop-payment/shop-payment-gateways.service';
 import { COUPON_REPOSITORY } from '../../../coupon/coupon.tokens';
 import { CouponRepository } from '../../../coupon/domain/repositories/coupon.repository';
 import { buildTelegramOrderLinePricing } from '../helpers/build-telegram-order-pricing';
 import { OrderRepository } from '../../domain/repositories/order.repository';
-import { SEPAY_GATEWAY } from '../../../../integration/bank/bank.tokens';
 import { ORDER_REPOSITORY } from '../../order.tokens';
 import {
   TelegramOrderQuoteDto,
@@ -20,11 +19,10 @@ export class QuoteTelegramOrderUseCase {
     private readonly orderRepository: OrderRepository,
     @Inject(COUPON_REPOSITORY)
     private readonly couponRepository: CouponRepository,
-    @Inject(SEPAY_GATEWAY)
-    private readonly sepayGateway: SepayGateway,
+    private readonly shopGateways: ShopPaymentGatewaysService,
   ) {}
 
-  async execute(input: TelegramOrderQuoteDto): Promise<TelegramOrderQuoteResponseDto> {
+  async execute(shopId: string, input: TelegramOrderQuoteDto): Promise<TelegramOrderQuoteResponseDto> {
     const quantity = Number(input.quantity);
     if (!Number.isInteger(quantity) || quantity < 1) {
       throw new ApiException('invalid_quantity', 'Quantity must be at least 1.', 400);
@@ -35,7 +33,10 @@ export class QuoteTelegramOrderUseCase {
       throw new ApiException('user_not_found', 'Telegram user is not linked yet.', 404);
     }
 
-    const variant = await this.orderRepository.findActiveVariantById(Number(input.variant_id));
+    const variant = await this.orderRepository.findActiveVariantById(
+      shopId,
+      Number(input.variant_id),
+    );
     if (!variant) {
       throw new ApiException('variant_not_found', 'Variant not found or inactive.', 404);
     }
@@ -55,6 +56,7 @@ export class QuoteTelegramOrderUseCase {
     const { pricing } = await buildTelegramOrderLinePricing(
       this.orderRepository,
       this.couponRepository,
+      shopId,
       variant,
       quantity,
       userId,
@@ -63,6 +65,11 @@ export class QuoteTelegramOrderUseCase {
         userCouponId: input.user_coupon_id,
       },
     );
+
+    const [sepayGateway, binanceGateway] = await Promise.all([
+      this.shopGateways.getSepay(shopId),
+      this.shopGateways.getBinance(shopId),
+    ]);
 
     return {
       variant_id: variant.id,
@@ -82,7 +89,10 @@ export class QuoteTelegramOrderUseCase {
           }
         : null,
       coupon_applied: pricing.couponApplied,
-      payment_methods: filterPaymentMethodsForBank(variant.paymentMethods, this.sepayGateway),
+      payment_methods: filterPaymentMethodsForShop(variant.paymentMethods, {
+        sepay: sepayGateway,
+        binance: binanceGateway,
+      }),
       fulfillment_type: variant.fulfillmentType,
       stock_available: stockAvailable,
     };

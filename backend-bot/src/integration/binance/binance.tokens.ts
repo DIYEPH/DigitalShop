@@ -1,1 +1,0 @@
-export const BINANCE_PAY_GATEWAY = Symbol('BINANCE_PAY_GATEWAY');

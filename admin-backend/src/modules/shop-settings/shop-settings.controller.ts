@@ -16,6 +16,7 @@ import { CurrentShop } from "../tenant/types/current-shop";
 import {
   ReorderPaymentCredentialsDto,
   UpdateTelegramBotDto,
+  UpdateTelegramBotStatusDto,
   UpsertPaymentCredentialDto,
 } from "./dto/shop-settings.dto";
 import { ShopSettingsService } from "./shop-settings.service";
@@ -44,6 +45,17 @@ export class ShopSettingsController {
     @Body() dto: UpdateTelegramBotDto,
   ) {
     return this.shopSettingsService.updateTelegramBot(currentShop, shopId, dto);
+  }
+
+  @Put("bot/status")
+  @ShopScoped()
+  @ApiOperation({ summary: "Enable or disable the Telegram bot (spawns/kills the runner)" })
+  setTelegramBotStatus(
+    @CurrentShopDecorator() currentShop: CurrentShop,
+    @Param("shopId") shopId: string,
+    @Body() dto: UpdateTelegramBotStatusDto,
+  ) {
+    return this.shopSettingsService.setTelegramBotStatus(currentShop, shopId, dto);
   }
 
   @Get("payment-credentials")

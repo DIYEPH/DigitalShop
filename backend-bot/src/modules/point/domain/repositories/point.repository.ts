@@ -11,11 +11,13 @@ export interface DailyLoginStatusSnapshot {
 export interface PointRepository {
   findUserIdByTelegramId(telegramId: number): Promise<number | null>;
   getDailyLoginStatusByTelegramId(
+    shopId: string,
     telegramId: number,
     claimDate: string,
     timezone: string,
   ): Promise<DailyLoginStatusSnapshot | null>;
   claimDailyLogin(
+    shopId: string,
     userId: number,
     claimDate: string,
     pointsAwarded: number,

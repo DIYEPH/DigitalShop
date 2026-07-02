@@ -5,7 +5,6 @@ const BackendProduct = require('../services/backend-product');
 
 const PAYMENT_METHODS = ['BALANCE_VND', 'BINANCE', 'BALANCE', 'CRYPTO', 'BANK'];
 
-/** `coupon_enter_{productId}_{variantId}_{qty}` hoặc `coupon_clear_...` */
 function normalizeCouponOpts(opts) {
   if (!opts) return null;
   if (typeof opts === 'string') return { couponCode: opts, userCouponId: null };
@@ -17,6 +16,7 @@ function normalizeCouponOpts(opts) {
 
 function parseCouponCallbackData(data) {
   const parts = data.split('_');
+  // Format: coupon_enter_{productId}_{variantId}_{qty} / coupon_clear_...
   return {
     productId: parseInt(parts[2], 10),
     variantId: parseInt(parts[3], 10),

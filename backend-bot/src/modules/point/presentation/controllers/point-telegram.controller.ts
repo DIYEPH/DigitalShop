@@ -1,4 +1,5 @@
 import { Body, Controller, Get, ParseIntPipe, Post, Query, UseGuards } from '@nestjs/common';
+import { BotShopId } from '../../../auth/presentation/decorators/bot-shop.decorator';
 import { BotSecretGuard } from '../../../auth/presentation/guards/bot-secret.guard';
 import { TelegramDailyLoginClaimDto } from '../../application/dto/telegram-daily-login.dto';
 import { ClaimTelegramDailyLoginUseCase } from '../../application/use-cases/claim-telegram-daily-login.use-case';
@@ -13,14 +14,17 @@ export class PointTelegramController {
   ) {}
 
   @Get('daily')
-  async getDailyStatus(@Query('telegram_id', ParseIntPipe) telegramId: number) {
-    const data = await this.getDailyStatusUseCase.execute(telegramId);
+  async getDailyStatus(
+    @BotShopId() shopId: string,
+    @Query('telegram_id', ParseIntPipe) telegramId: number,
+  ) {
+    const data = await this.getDailyStatusUseCase.execute(shopId, telegramId);
     return { data };
   }
 
   @Post('daily/claim')
-  async claimDaily(@Body() body: TelegramDailyLoginClaimDto) {
-    const data = await this.claimDailyUseCase.execute(Number(body.telegram_id));
+  async claimDaily(@BotShopId() shopId: string, @Body() body: TelegramDailyLoginClaimDto) {
+    const data = await this.claimDailyUseCase.execute(shopId, Number(body.telegram_id));
     return { data };
   }
 }

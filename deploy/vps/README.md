@@ -4,8 +4,9 @@ This deployment runs these services on an Oracle A1 Flex VPS:
 
 - `admin-frontend`
 - `admin-backend`
-- `backend-bot`
-- `bot_binance_pay`
+- `backend-bot` — bundles the bot runner: BotRunnerManager runs one
+  `bot_binance_pay` instance per ACTIVE shop, configured from the database
+  (admin Settings). There is no separate bot container.
 
 PostgreSQL is not started by Docker Compose. Production uses the existing Neon
 database through `DATABASE_URL`.
@@ -32,10 +33,13 @@ The important values are:
 - `DATABASE_URL`: Neon connection string, including SSL mode if Neon requires it.
 - `ADMIN_FRONTEND_API_ORIGIN`: internal URL from `admin-frontend` to `admin-backend`.
 - `JWT_SECRET`: long random secret for `admin-backend`.
-- `BOT_INTERNAL_SECRET`: internal secret accepted by `backend-bot`.
-- `BACKEND_BOT_SECRET`: must equal `BOT_INTERNAL_SECRET`.
-- `BOT_TOKEN` and `ADMIN_IDS`: Telegram bot runtime config.
-- Binance/SePay/bank variables if payment polling is enabled.
+- `SHOP_SECRET_ENCRYPTION_KEY`: AES-256-GCM key for per-shop credentials,
+  shared by `admin-backend` (encrypt) and `backend-bot` (decrypt).
+- `BOT_INTERNAL_SECRET`: internal dev/seed secret for `backend-bot`.
+
+Per-shop values are not in `.env`: bot token/secret (`telegram_bots`), shop
+name and support link (`shops`), Binance/SePay/bank
+(`shop_payment_credentials`) — sellers manage them in admin Settings.
 
 Do not commit `/opt/digitalshop/.env`.
 
@@ -82,8 +86,8 @@ Read logs:
 ```bash
 docker compose logs -f admin-backend
 docker compose logs -f admin-frontend
+# Per-shop bot logs are inside backend-bot (prefixed with [bot#<id>])
 docker compose logs -f backend-bot
-docker compose logs -f bot-binance-pay
 ```
 
 Restart all services:
@@ -110,7 +114,6 @@ cd /opt/digitalshop
 ADMIN_FRONTEND_IMAGE=ghcr.io/OWNER/REPO/admin-frontend:OLD_SHA \
 ADMIN_BACKEND_IMAGE=ghcr.io/OWNER/REPO/admin-backend:OLD_SHA \
 BACKEND_BOT_IMAGE=ghcr.io/OWNER/REPO/backend-bot:OLD_SHA \
-BOT_BINANCE_PAY_IMAGE=ghcr.io/OWNER/REPO/bot-binance-pay:OLD_SHA \
 docker compose up -d
 ```
 
@@ -124,6 +127,5 @@ Replace `OWNER`, `REPO`, and `OLD_SHA` with the image you want to restore.
   the production database.
 - `admin-frontend` proxies browser `/api/*` requests at runtime and uses
   `API_ORIGIN=http://admin-backend:3000` inside the Docker network.
-- `bot_binance_pay` calls `backend-bot` through the Docker network using
-  `http://backend-bot:3001`. Do not append `/api` to `BACKEND_API_BASE_URL`
-  because the bot code already calls `/api/...` paths.
+- Per-shop bot instances run inside the `backend-bot` container as worker
+  threads managed by BotRunnerManager.

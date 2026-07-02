@@ -3,11 +3,13 @@ import { TelegramProductListItemEntity } from '../entities/product-list-item.ent
 
 export interface ProductRepository {
   listTelegramProducts(
+    shopId: string,
     categoryId: number | null,
     page: number,
     limit: number,
   ): Promise<{ items: TelegramProductListItemEntity[]; total: number }>;
   findTelegramProductDetailById(
+    shopId: string,
     productId: number,
   ): Promise<TelegramProductDetailEntity | null>;
 }

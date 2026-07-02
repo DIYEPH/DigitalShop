@@ -22,8 +22,12 @@ export interface BindReferralResult {
 
 export interface ReferralRepository {
   findUserIdByTelegramId(telegramId: number): Promise<number | null>;
-  getReferralMeByTelegramId(telegramId: number): Promise<ReferralMeSnapshot | null>;
+  getReferralMeByTelegramId(
+    shopId: string,
+    telegramId: number,
+  ): Promise<ReferralMeSnapshot | null>;
   bindReferralByCode(
+    shopId: string,
     referredUserId: number,
     code: string,
     refereeBonusPoints: number,

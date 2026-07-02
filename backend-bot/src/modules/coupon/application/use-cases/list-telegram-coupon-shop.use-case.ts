@@ -21,8 +21,8 @@ export class ListTelegramCouponShopUseCase {
     private readonly couponRepository: CouponRepository,
   ) {}
 
-  async execute(): Promise<{ items: ShopCouponItemDto[] }> {
-    const rows = await this.couponRepository.listShopCoupons();
+  async execute(shopId: string): Promise<{ items: ShopCouponItemDto[] }> {
+    const rows = await this.couponRepository.listShopCoupons(shopId);
     return {
       items: rows.map((row) => ({
         code: row.coupon.code,

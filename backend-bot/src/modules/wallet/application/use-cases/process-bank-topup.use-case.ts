@@ -1,7 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { buildSepayTopupTxId } from '../../../../integration/bank/sepay-tx-id';
-import { SepayGateway } from '../../../../integration/bank/sepay.gateway';
-import { SEPAY_GATEWAY } from '../../../../integration/bank/bank.tokens';
+import { ShopPaymentGatewaysService } from '../../../../integration/shop-payment/shop-payment-gateways.service';
 import { TOPUP_REPOSITORY } from '../../wallet.tokens';
 import { TopupEntity } from '../../domain/entities/topup.entity';
 import { TopupRepository } from '../../domain/repositories/topup.repository';
@@ -11,18 +10,19 @@ export class ProcessBankTelegramTopupUseCase {
   constructor(
     @Inject(TOPUP_REPOSITORY)
     private readonly topupRepository: TopupRepository,
-    @Inject(SEPAY_GATEWAY)
-    private readonly sepayGateway: SepayGateway,
+    private readonly shopGateways: ShopPaymentGatewaysService,
   ) {}
 
   async execute(topup: TopupEntity): Promise<boolean> {
-    if (!this.sepayGateway.isBankCheckoutReady()) return false;
     if (topup.status !== 'PENDING' || topup.provider !== 'BANK' || topup.currency !== 'VND') {
       return false;
     }
 
-    const transactions = await this.sepayGateway.getTransactions();
-    const matched = this.sepayGateway.findMatchingPayment(
+    const sepayGateway = await this.shopGateways.getSepay(topup.shopId);
+    if (!sepayGateway?.isBankCheckoutReady()) return false;
+
+    const transactions = await sepayGateway.getTransactions();
+    const matched = sepayGateway.findMatchingPayment(
       transactions,
       topup.paymentCode,
       topup.amount,

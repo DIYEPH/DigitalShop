@@ -13,6 +13,7 @@ export class GetTelegramOrderDetailUseCase {
   ) {}
 
   async execute(
+    shopId: string,
     orderId: string,
     telegramId: number,
   ): Promise<TelegramOrderDetailResponseDto> {
@@ -21,7 +22,7 @@ export class GetTelegramOrderDetailUseCase {
       throw new ApiException('user_not_found', 'Telegram user is not linked yet.', 404);
     }
 
-    const detail = await this.orderRepository.findTelegramOrderDetail(orderId, userId);
+    const detail = await this.orderRepository.findTelegramOrderDetail(shopId, orderId, userId);
     if (!detail) {
       throw new ApiException('order_not_found', 'Order not found.', 404);
     }

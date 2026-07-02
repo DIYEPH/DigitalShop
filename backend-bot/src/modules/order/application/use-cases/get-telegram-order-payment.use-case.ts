@@ -1,12 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ApiException } from '../../../../shared/errors/api.exception';
 import { assertBankCheckoutConfigured } from '../../../../integration/bank/bank-checkout';
-import { SepayGateway } from '../../../../integration/bank/sepay.gateway';
-import { BinancePayGateway } from '../../../../integration/binance/binance-pay.gateway';
+import { ShopPaymentGatewaysService } from '../../../../integration/shop-payment/shop-payment-gateways.service';
 import { buildOrderExpiry } from '../../domain/order-pricing';
 import { OrderRepository } from '../../domain/repositories/order.repository';
-import { BINANCE_PAY_GATEWAY } from '../../../../integration/binance/binance.tokens';
-import { SEPAY_GATEWAY } from '../../../../integration/bank/bank.tokens';
 import { ORDER_REPOSITORY } from '../../order.tokens';
 import {
   TelegramOrderPaymentParams,
@@ -18,14 +15,15 @@ export class GetTelegramOrderPaymentUseCase {
   constructor(
     @Inject(ORDER_REPOSITORY)
     private readonly orderRepository: OrderRepository,
-    @Inject(BINANCE_PAY_GATEWAY)
-    private readonly binanceGateway: BinancePayGateway,
-    @Inject(SEPAY_GATEWAY)
-    private readonly sepayGateway: SepayGateway,
+    private readonly shopGateways: ShopPaymentGatewaysService,
   ) {}
 
-  async execute(input: TelegramOrderPaymentParams): Promise<TelegramOrderPaymentResponseDto> {
+  async execute(
+    shopId: string,
+    input: TelegramOrderPaymentParams,
+  ): Promise<TelegramOrderPaymentResponseDto> {
     const order = await this.orderRepository.findOrderPaymentForTelegram(
+      shopId,
       input.order_id,
       input.telegram_id,
     );
@@ -33,8 +31,13 @@ export class GetTelegramOrderPaymentUseCase {
       throw new ApiException('order_not_found', 'Order not found.', 404);
     }
 
+    const [binanceGateway, sepayGateway] = await Promise.all([
+      this.shopGateways.getBinance(shopId),
+      this.shopGateways.getSepay(shopId),
+    ]);
+
     if (order.paymentMethod === 'BANK' && order.status === 'PENDING') {
-      assertBankCheckoutConfigured(this.sepayGateway);
+      assertBankCheckoutConfigured(sepayGateway);
     }
 
     const expiry = buildOrderExpiry(order.createdAt, order.paymentMethod);
@@ -53,15 +56,16 @@ export class GetTelegramOrderPaymentUseCase {
       currency: order.currency,
       total_price: order.totalPrice,
       payment_code: paymentCode,
-      binance_id: order.paymentMethod === 'BINANCE' ? this.binanceGateway.getPayId() || null : null,
+      binance_id:
+        order.paymentMethod === 'BINANCE' ? binanceGateway?.getPayId() || null : null,
       binance_qr_url:
-        order.paymentMethod === 'BINANCE' ? this.binanceGateway.getPayQrUrl() : null,
-      bank_name: isBank ? this.sepayGateway.getBankName() : null,
-      bank_account: isBank ? this.sepayGateway.getBankAccount() : null,
-      bank_owner: isBank ? this.sepayGateway.getBankOwner() : null,
+        order.paymentMethod === 'BINANCE' ? binanceGateway?.getPayQrUrl() ?? null : null,
+      bank_name: isBank ? sepayGateway?.getBankName() ?? null : null,
+      bank_account: isBank ? sepayGateway?.getBankAccount() ?? null : null,
+      bank_owner: isBank ? sepayGateway?.getBankOwner() ?? null : null,
       vietqr_url:
-        isBank && paymentCode
-          ? this.sepayGateway.buildVietQrUrl(order.totalPrice, paymentCode)
+        isBank && paymentCode && sepayGateway
+          ? sepayGateway.buildVietQrUrl(order.totalPrice, paymentCode)
           : null,
       expires_at: expiry.expiresAt,
       seconds_left: expiry.secondsLeft,

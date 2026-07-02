@@ -594,7 +594,7 @@ export class OrdersService {
       }
 
       if (dbPaymentMethod === 'BALANCE') {
-        await this.payWithBalance(client, userId, order.id, totalPrice);
+        await this.payWithBalance(client, shopId, userId, order.id, totalPrice);
       }
 
       await client.query('COMMIT');
@@ -741,17 +741,30 @@ export class OrdersService {
     if ((result.rowCount ?? 0) < quantity) throw new BadRequestException('Not enough stock for this quantity');
   }
 
-  private async payWithBalance(client: PoolClient, userId: number, orderId: string, totalPrice: number): Promise<void> {
-    const user = await client.query<{ balance_usdt: string }>(
-      `SELECT balance_usdt FROM users WHERE id = $1 FOR UPDATE`,
-      [userId],
+  /** BALANCE spends the wallet the customer topped up in this shop (user_shop_balances). */
+  private async payWithBalance(
+    client: PoolClient,
+    shopId: string,
+    userId: number,
+    orderId: string,
+    totalPrice: number,
+  ): Promise<void> {
+    const balance = await client.query<{ balance_usdt: string }>(
+      `SELECT balance_usdt
+       FROM user_shop_balances
+       WHERE user_id = $1 AND shop_id = $2::uuid
+       FOR UPDATE`,
+      [userId, shopId],
     );
-    if (!user.rows[0]) throw new NotFoundException('User not found');
-    if (toNumber(user.rows[0].balance_usdt) < totalPrice) throw new BadRequestException('Insufficient balance');
+    if (toNumber(balance.rows[0]?.balance_usdt) < totalPrice) {
+      throw new BadRequestException('Insufficient balance');
+    }
 
     await client.query(
-      `UPDATE users SET balance_usdt = balance_usdt - $2::numeric, updated_at = NOW() WHERE id = $1`,
-      [userId, totalPrice],
+      `UPDATE user_shop_balances
+       SET balance_usdt = balance_usdt - $3::numeric, updated_at = NOW()
+       WHERE user_id = $1 AND shop_id = $2::uuid`,
+      [userId, shopId, totalPrice],
     );
 
     const allInStock = await client.query<{ all_in_stock: boolean }>(

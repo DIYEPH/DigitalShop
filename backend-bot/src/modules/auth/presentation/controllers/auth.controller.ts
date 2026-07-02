@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
 import { TelegramLoginDto } from '../../application/dto/telegram-login.dto';
 import { TelegramLoginUseCase } from '../../application/use-cases/telegram-login.use-case';
+import { BotShopId } from '../decorators/bot-shop.decorator';
 import { BotSecretGuard } from '../guards/bot-secret.guard';
 import { GetTelegramMeUseCase } from '../../application/use-cases/get-telegram-me.use-case';
 import { UpdateLanguageDto } from '../../application/dto/update-language.dto';
@@ -16,15 +17,16 @@ export class AuthController {
   ) {}
 
   @Post('login')
-  async telegramLogin(@Body() body: TelegramLoginDto) {
-    return { data: await this.telegramLoginUseCase.execute(body) };
+  async telegramLogin(@BotShopId() shopId: string, @Body() body: TelegramLoginDto) {
+    return { data: await this.telegramLoginUseCase.execute(shopId, body) };
   }
 
   @Get('me/:telegramId')
   async telegramMe(
+    @BotShopId() shopId: string,
     @Param('telegramId', ParseIntPipe) telegramId: number,
   ) {
-    return { data: await this.getTelegramMeUseCase.execute(telegramId) };
+    return { data: await this.getTelegramMeUseCase.execute(shopId, telegramId) };
   }
 
   @Post('language')

@@ -55,6 +55,7 @@ async function finalizeResolvedCoupon(
 export async function resolveOrderCoupon(
   orderRepository: OrderRepository,
   couponRepository: CouponRepository,
+  shopId: string,
   input: ResolveOrderCouponInput,
   variantId: number,
   userId: number,
@@ -62,7 +63,11 @@ export async function resolveOrderCoupon(
   const now = new Date();
 
   if (input.userCouponId != null) {
-    const row = await couponRepository.findUserCouponById(Number(input.userCouponId), userId);
+    const row = await couponRepository.findUserCouponById(
+      shopId,
+      Number(input.userCouponId),
+      userId,
+    );
     if (!row || row.usedAt) {
       throw new ApiException('coupon_not_owned', 'You do not own this coupon.', 400);
     }
@@ -73,7 +78,7 @@ export async function resolveOrderCoupon(
   const code = input.couponCode?.trim();
   if (!code) return null;
 
-  const coupon = await orderRepository.findCouponByCode(code);
+  const coupon = await orderRepository.findCouponByCode(shopId, code);
   if (!coupon) {
     throw new ApiException('coupon_invalid', 'Invalid coupon code.', 400);
   }
@@ -81,7 +86,7 @@ export async function resolveOrderCoupon(
   assertCouponBase(coupon, variantId, now);
 
   if (coupon.requiresOwnership) {
-    const owned = await couponRepository.findUnusedUserCouponByCode(userId, code);
+    const owned = await couponRepository.findUnusedUserCouponByCode(shopId, userId, code);
     if (!owned) {
       throw new ApiException('coupon_not_owned', 'You do not own this coupon.', 400);
     }

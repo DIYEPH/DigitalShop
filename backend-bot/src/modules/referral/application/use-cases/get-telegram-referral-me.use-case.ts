@@ -15,8 +15,8 @@ export class GetTelegramReferralMeUseCase {
     private readonly config: ConfigService,
   ) {}
 
-  async execute(telegramId: number): Promise<TelegramReferralMeResponseDto> {
-    const snapshot = await this.referralRepository.getReferralMeByTelegramId(telegramId);
+  async execute(shopId: string, telegramId: number): Promise<TelegramReferralMeResponseDto> {
+    const snapshot = await this.referralRepository.getReferralMeByTelegramId(shopId, telegramId);
     if (!snapshot) {
       throw new ApiException('user_not_found', 'Telegram user is not linked yet.', 404);
     }

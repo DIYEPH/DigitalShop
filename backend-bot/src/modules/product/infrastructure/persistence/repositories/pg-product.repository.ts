@@ -17,20 +17,21 @@ export class PgProductRepository implements ProductRepository {
   }
 
   async listTelegramProducts(
+    shopId: string,
     categoryId: number | null,
     page: number,
     limit: number,
   ): Promise<{ items: TelegramProductListItemEntity[]; total: number }> {
     const offset = (page - 1) * limit;
-    const queryParams: unknown[] = [];
+    const queryParams: unknown[] = [shopId];
 
     if (categoryId != null) queryParams.push(categoryId);
     queryParams.push(limit, offset);
 
-    const catIdx = categoryId != null ? 1 : null;
-    const limitIdx = catIdx != null ? 2 : 1;
-    const offsetIdx = catIdx != null ? 3 : 2;
-    const categoryWhere = catIdx != null ? `WHERE P.CATEGORY_ID = $${catIdx}` : '';
+    const catIdx = categoryId != null ? 2 : null;
+    const limitIdx = catIdx != null ? 3 : 2;
+    const offsetIdx = catIdx != null ? 4 : 3;
+    const categoryWhere = catIdx != null ? `AND P.CATEGORY_ID = $${catIdx}` : '';
 
     const result = await this.pool.query(
       `SELECT
@@ -60,6 +61,7 @@ export class PgProductRepository implements ProductRepository {
           WHERE V.IS_ACTIVE = TRUE AND S.STATUS = 'AVAILABLE'
           GROUP BY V.PRODUCT_ID
         ) STOCK ON STOCK.PRODUCT_ID = P.ID
+        WHERE P.SHOP_ID = $1::uuid
         ${categoryWhere}
         ORDER BY P.ID DESC
         LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
@@ -80,6 +82,7 @@ export class PgProductRepository implements ProductRepository {
   }
 
   async findTelegramProductDetailById(
+    shopId: string,
     productId: number,
   ): Promise<TelegramProductDetailEntity | null> {
     const result = await this.pool.query<{
@@ -127,9 +130,9 @@ export class PgProductRepository implements ProductRepository {
           ) STOCK ON STOCK.VARIANT_ID = V.ID
           WHERE V.PRODUCT_ID = P.ID AND V.IS_ACTIVE = TRUE
         ) VARIANTS ON TRUE
-        WHERE P.ID = $1
+        WHERE P.ID = $1 AND P.SHOP_ID = $2::uuid
         LIMIT 1`,
-      [productId],
+      [productId, shopId],
     );
 
     const row = result.rows[0];

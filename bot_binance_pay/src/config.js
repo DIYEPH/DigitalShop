@@ -1,33 +1,18 @@
 require('dotenv').config();
 
+// Per-shop values are injected by backend-bot's BotRunnerManager;
+// sellers configure them in the admin panel.
 module.exports = {
   BOT_TOKEN: process.env.BOT_TOKEN,
   BOT_USERNAME: process.env.BOT_USERNAME || '',
   SHOP_NAME: process.env.SHOP_NAME || 'Shop Bot',
-  ADMIN_IDS: (process.env.ADMIN_IDS || '').split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id)),
-  ADMIN_USER_NAME: process.env.ADMIN_USER_NAME,
-  BINANCE_API_KEY: process.env.BINANCE_API_KEY,
-  BINANCE_SECRET_KEY: process.env.BINANCE_SECRET_KEY,
-  BINANCE_PAY_ID: process.env.BINANCE_PAY_ID,
+  // Shop support link ("Contact admin" button).
+  SUPPORT_URL: process.env.SUPPORT_URL || '',
+  // UI hint only; the backend enforces actual payment availability.
   BANK_ENABLED: process.env.BANK_ENABLED !== 'false',
-  /** Khớp backend `MIN_BANK_TOPUP_VND` (shared/constants/wallet-topup.ts) — chỉ dùng hint UI bot. */
+  // Must match backend MIN_BANK_TOPUP_VND.
   MIN_BANK_TOPUP_VND: 10000,
-  SEPAY_API_KEY: process.env.SEPAY_API_KEY,
-  BANK_ACCOUNT: process.env.BANK_ACCOUNT,
-  BANK_NAME: process.env.BANK_NAME,
-  BANK_OWNER: process.env.BANK_OWNER,
-  BANK_BIN: process.env.BANK_BIN,
-  REFERRER_BONUS: parseFloat(process.env.REFERRER_BONUS) || 1,
-  REFEREE_BONUS: parseFloat(process.env.REFEREE_BONUS) || 0.5,
-  MIN_DEPOSIT_FOR_BONUS: parseFloat(process.env.MIN_DEPOSIT_FOR_BONUS) || 5,
-  DEPOSIT_EXPIRES_MINUTES: parseInt(process.env.DEPOSIT_EXPIRES_MINUTES) || 15,
   BACKEND_API_BASE_URL: process.env.BACKEND_API_BASE_URL || '',
   BACKEND_BOT_SECRET: process.env.BACKEND_BOT_SECRET || '',
-  BACKEND_REQUEST_TIMEOUT_MS: parseInt(process.env.BACKEND_REQUEST_TIMEOUT_MS || '8000', 10),
-
-  MYSQL_HOST: process.env.MYSQL_HOST,
-  MYSQL_PORT: parseInt(process.env.MYSQL_PORT) || 3306,
-  MYSQL_USER: process.env.MYSQL_USER,
-  MYSQL_PASSWORD: process.env.MYSQL_PASSWORD,
-  MYSQL_DATABASE: process.env.MYSQL_DATABASE
+  BACKEND_REQUEST_TIMEOUT_MS: parseInt(process.env.BACKEND_REQUEST_TIMEOUT_MS || '8000', 10)
 };

@@ -7,8 +7,8 @@ async function getWallet(userId) {
 
   return {
     balance: user.balanceUsdt ?? 0,
+    balanceVnd: user.balanceVnd ?? 0,
     balancePoint: user.balancePoint ?? 0,
-    total: (user.balanceUsdt ?? 0) + (user.balancePoint ?? 0),
     balanceSpent: user.balanceSpentUsdt ?? 0,
     pointSpent: user.creditsSpentCoin ?? 0,
   };

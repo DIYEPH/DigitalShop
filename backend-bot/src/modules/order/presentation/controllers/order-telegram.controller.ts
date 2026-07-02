@@ -8,6 +8,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { BotShopId } from '../../../auth/presentation/decorators/bot-shop.decorator';
 import { BotSecretGuard } from '../../../auth/presentation/guards/bot-secret.guard';
 import { CancelTelegramOrderUseCase } from '../../application/use-cases/cancel-telegram-order.use-case';
 import { CheckTelegramOrderPaymentUseCase } from '../../application/use-cases/check-telegram-order-payment.use-case';
@@ -42,35 +43,36 @@ export class OrderTelegramController {
   ) {}
 
   @Post('quote')
-  async quote(@Body() body: TelegramOrderQuoteDto) {
-    const data = await this.quoteTelegramOrderUseCase.execute(body);
+  async quote(@BotShopId() shopId: string, @Body() body: TelegramOrderQuoteDto) {
+    const data = await this.quoteTelegramOrderUseCase.execute(shopId, body);
     return { data };
   }
 
   @Get('pending')
-  async getPending(@Query() query: TelegramOrderPendingQueryDto) {
-    const data = await this.getPendingTelegramOrderUseCase.execute(query);
+  async getPending(@BotShopId() shopId: string, @Query() query: TelegramOrderPendingQueryDto) {
+    const data = await this.getPendingTelegramOrderUseCase.execute(shopId, query);
     return { data };
   }
 
   @Get()
-  async list(@Query() query: TelegramOrderListQueryDto) {
-    const result = await this.listTelegramOrdersUseCase.execute(query);
+  async list(@BotShopId() shopId: string, @Query() query: TelegramOrderListQueryDto) {
+    const result = await this.listTelegramOrdersUseCase.execute(shopId, query);
     return { data: result.items, meta: result.meta };
   }
 
   @Post('cancel')
-  async cancel(@Body() body: TelegramOrderCancelDto) {
-    const data = await this.cancelTelegramOrderUseCase.execute(body);
+  async cancel(@BotShopId() shopId: string, @Body() body: TelegramOrderCancelDto) {
+    const data = await this.cancelTelegramOrderUseCase.execute(shopId, body);
     return { data };
   }
 
   @Get(':order_id/payment')
   async getPayment(
+    @BotShopId() shopId: string,
     @Param('order_id', ParseUUIDPipe) orderId: string,
     @Query() query: TelegramOrderPaymentQueryDto,
   ) {
-    const data = await this.getTelegramOrderPaymentUseCase.execute({
+    const data = await this.getTelegramOrderPaymentUseCase.execute(shopId, {
       order_id: orderId,
       telegram_id: query.telegram_id,
     });
@@ -79,10 +81,11 @@ export class OrderTelegramController {
 
   @Post(':order_id/check-payment')
   async checkPayment(
+    @BotShopId() shopId: string,
     @Param('order_id', ParseUUIDPipe) orderId: string,
     @Body() body: TelegramOrderPaymentQueryDto,
   ) {
-    const data = await this.checkTelegramOrderPaymentUseCase.execute({
+    const data = await this.checkTelegramOrderPaymentUseCase.execute(shopId, {
       order_id: orderId,
       telegram_id: body.telegram_id,
     });
@@ -91,16 +94,21 @@ export class OrderTelegramController {
 
   @Get(':order_id')
   async getDetail(
+    @BotShopId() shopId: string,
     @Param('order_id', ParseUUIDPipe) orderId: string,
     @Query() query: TelegramOrderDetailQueryDto,
   ) {
-    const data = await this.getTelegramOrderDetailUseCase.execute(orderId, query.telegram_id);
+    const data = await this.getTelegramOrderDetailUseCase.execute(
+      shopId,
+      orderId,
+      query.telegram_id,
+    );
     return { data };
   }
 
   @Post()
-  async create(@Body() body: TelegramOrderCreateDto) {
-    const data = await this.createTelegramOrderUseCase.execute(body);
+  async create(@BotShopId() shopId: string, @Body() body: TelegramOrderCreateDto) {
+    const data = await this.createTelegramOrderUseCase.execute(shopId, body);
     return { data };
   }
 }

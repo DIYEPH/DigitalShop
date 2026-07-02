@@ -10,8 +10,8 @@ export class GetTelegramMeUseCase {
     private readonly authUserRepository: AuthUserRepository,
   ) {}
 
-  async execute(telegramId: number): Promise<TelegramMeResponseDto> {
-    const user = await this.authUserRepository.findTelegramMeById(telegramId);
+  async execute(shopId: string, telegramId: number): Promise<TelegramMeResponseDto> {
+    const user = await this.authUserRepository.findTelegramMeById(shopId, telegramId);
     if (!user) {
       throw new NotFoundException('Telegram user is not linked yet.');
     }

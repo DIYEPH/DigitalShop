@@ -12,6 +12,7 @@ export class RedeemTelegramCouponUseCase {
   ) {}
 
   async execute(
+    shopId: string,
     input: TelegramCouponRedeemDto,
   ): Promise<{ user_coupon_id: number; code: string }> {
     const userId = await this.couponRepository.findUserIdByTelegramId(Number(input.telegram_id));
@@ -20,6 +21,7 @@ export class RedeemTelegramCouponUseCase {
     }
 
     const { userCouponId } = await this.couponRepository.redeemShopCoupon(
+      shopId,
       userId,
       input.code,
     );

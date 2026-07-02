@@ -36,6 +36,12 @@ export class UpdateTelegramBotDto {
   status?: "ACTIVE" | "SUSPENDED";
 }
 
+export class UpdateTelegramBotStatusDto {
+  @ApiProperty({ enum: ["ACTIVE", "SUSPENDED"] })
+  @IsIn(["ACTIVE", "SUSPENDED"])
+  status!: "ACTIVE" | "SUSPENDED";
+}
+
 export class UpsertPaymentCredentialDto {
   @ApiProperty({ enum: PAYMENT_METHODS })
   @IsIn(PAYMENT_METHODS)

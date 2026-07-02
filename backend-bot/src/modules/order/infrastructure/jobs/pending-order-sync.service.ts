@@ -1,10 +1,8 @@
 import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { BinancePayGateway } from '../../../../integration/binance/binance-pay.gateway';
 import { ProcessBankOrderPaymentUseCase } from '../../application/use-cases/process-bank-order-payment.use-case';
 import { ProcessBinanceOrderPaymentUseCase } from '../../application/use-cases/process-binance-order-payment.use-case';
 import { OrderRepository } from '../../domain/repositories/order.repository';
-import { BINANCE_PAY_GATEWAY } from '../../../../integration/binance/binance.tokens';
 import { ORDER_REPOSITORY } from '../../order.tokens';
 
 /**
@@ -12,8 +10,8 @@ import { ORDER_REPOSITORY } from '../../order.tokens';
  *
  * Mỗi tick (mặc định 30s) chạy tuần tự:
  *  1. Expire  — hủy batch đơn BINANCE/CRYPTO/BANK quá PENDING_PAYMENT_TIMEOUT_MS, trả stock RESERVED → AVAILABLE.
- *  2. BINANCE — poll Binance Pay API, confirm PAID, deliver IN_STOCK.
- *  3. BANK    — (feature 07) poll SePay API.
+ *  2. BINANCE — poll Binance Pay API bằng credential của từng shop, confirm PAID, deliver IN_STOCK.
+ *  3. BANK    — poll SePay API bằng credential của từng shop.
  *  4. CRYPTO  — (feature sau) kiểm tra on-chain.
  */
 const DEFAULT_POLL_MS = 30_000;
@@ -28,8 +26,6 @@ export class PendingOrderSyncService implements OnModuleInit, OnModuleDestroy {
   constructor(
     @Inject(ORDER_REPOSITORY)
     private readonly orderRepository: OrderRepository,
-    @Inject(BINANCE_PAY_GATEWAY)
-    private readonly binanceGateway: BinancePayGateway,
     private readonly processBinancePayment: ProcessBinanceOrderPaymentUseCase,
     private readonly processBankPayment: ProcessBankOrderPaymentUseCase,
     private readonly config: ConfigService,
@@ -78,7 +74,6 @@ export class PendingOrderSyncService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async binanceStep(): Promise<void> {
-    if (!this.binanceGateway.isEnabled()) return;
     const orders = await this.orderRepository.listPendingBinanceOrders();
     for (const order of orders) {
       await this.processBinancePayment.execute(order);

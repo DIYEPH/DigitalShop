@@ -184,7 +184,7 @@ describe('Telegram bot API (e2e)', { skip: !hasDb }, () => {
         await pool.query(
           `INSERT INTO coupons (code, variant_id, discount_type, percent_bps, cost_point, visibility, max_redemptions)
            VALUES ('E2E_ONCE', 1, 'PERCENT', 500, 0, 'PUBLIC', 1)
-           ON CONFLICT (code) DO UPDATE
+           ON CONFLICT (shop_id, code) DO UPDATE
            SET max_redemptions = 1, per_user_limit = NULL, is_active = TRUE, variant_id = 1`,
         );
         await pool.query(
@@ -1391,8 +1391,9 @@ describe('Telegram bot API (e2e)', { skip: !hasDb }, () => {
       assert.ok(before != null);
 
       await pool.query(
-        `INSERT INTO daily_login_point_claims (user_id, claim_date, points_awarded)
+        `INSERT INTO daily_login_point_claims (user_id, shop_id, claim_date, points_awarded)
          SELECT id,
+                (SELECT id FROM shops WHERE slug = 'default'),
                 ((NOW() AT TIME ZONE $2)::date - INTERVAL '1 day')::date,
                 5
            FROM users WHERE telegram_id = $1`,

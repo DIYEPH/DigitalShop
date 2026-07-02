@@ -1,8 +1,31 @@
 const path = require('node:path');
+const { createCipheriv, createHash, randomBytes } = require('node:crypto');
 const { Client } = require('pg');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const SEED_PASSWORD_HASH = '$2b$10$/xGkSIXQuvq/xvtHbU.PW.qfTFeTHr45.mKRROgfb9DSjwki4Ztze';
+
+// Mirrors admin-backend ShopSettingsService encryption (AES-256-GCM, v1 format).
+function encryptionKey() {
+  const keyMaterial =
+    process.env.SHOP_SECRET_ENCRYPTION_KEY ||
+    process.env.CREDENTIAL_ENCRYPTION_KEY ||
+    process.env.JWT_SECRET ||
+    'digitalshop-dev-secret';
+  return createHash('sha256').update(keyMaterial).digest();
+}
+
+function encryptJson(value) {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv('aes-256-gcm', encryptionKey(), iv);
+  const ciphertext = Buffer.concat([cipher.update(JSON.stringify(value), 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return ['v1', iv.toString('base64url'), tag.toString('base64url'), ciphertext.toString('base64url')].join(':');
+}
+
+function sha256Hex(value) {
+  return createHash('sha256').update(value).digest('hex');
+}
 
 function assertSafeEnvironment() {
   if (process.env.NODE_ENV === 'production' && process.env.ALLOW_PROD_DB_SCRIPTS !== 'true') {
@@ -64,17 +87,92 @@ async function getDefaultShopId(client) {
 
 async function syncUserShopBalance(client, userId) {
   await client.query(
-    `INSERT INTO user_shop_balances (user_id, shop_id, balance_usdt, balance_vnd)
-     SELECT u.id, s.id, u.balance_usdt, u.balance_vnd
+    `INSERT INTO user_shop_balances (user_id, shop_id, balance_usdt, balance_vnd, balance_point)
+     SELECT u.id, s.id, u.balance_usdt, u.balance_vnd, u.balance_point
      FROM users u
      CROSS JOIN shops s
      WHERE u.id = $1 AND s.slug = 'default'
      ON CONFLICT (user_id, shop_id) DO UPDATE SET
        balance_usdt = EXCLUDED.balance_usdt,
        balance_vnd = EXCLUDED.balance_vnd,
+       balance_point = EXCLUDED.balance_point,
        updated_at = NOW()`,
     [userId],
   );
+}
+
+/** The bot guard resolves the shop from sha256(BOT_INTERNAL_SECRET). */
+async function seedTelegramBot(client) {
+  const secret = process.env.BOT_INTERNAL_SECRET;
+  if (!secret) {
+    console.warn('BOT_INTERNAL_SECRET missing — skip telegram_bots seed (bot API will 401).');
+    return;
+  }
+  const shopId = await getDefaultShopId(client);
+  await client.query(
+    `INSERT INTO telegram_bots (shop_id, bot_username, secret_hash, status)
+     VALUES ($1, 'seed_shop_bot', $2, 'ACTIVE')
+     ON CONFLICT (secret_hash) DO UPDATE SET
+       shop_id = EXCLUDED.shop_id,
+       status = 'ACTIVE',
+       updated_at = NOW()`,
+    [shopId, sha256Hex(secret)],
+  );
+}
+
+/** Per-shop payment credentials read by backend-bot (encrypted at rest). */
+async function seedPaymentCredentials(client) {
+  const shopId = await getDefaultShopId(client);
+  const credentials = [
+    {
+      method: 'BINANCE',
+      provider: 'BINANCE',
+      displayName: 'Binance Pay',
+      secret: { api_key: 'e2e-binance-key', api_secret: 'e2e-binance-secret' },
+      publicPayload: { pay_id: '123456789', qr_url: '' },
+      priority: 0,
+    },
+    {
+      method: 'BANK',
+      provider: 'SEPAY',
+      displayName: 'Bank transfer',
+      secret: { api_key: 'e2e-sepay-key' },
+      publicPayload: {
+        bank_name: 'Vietcombank',
+        bank_bin: '970436',
+        account_number: '0123456789',
+        account_holder: 'E2E SHOP',
+      },
+      priority: 1,
+    },
+  ];
+
+  for (const cred of credentials) {
+    await client.query(
+      `INSERT INTO shop_payment_credentials (
+          shop_id, payment_method, provider, display_name,
+          encrypted_payload, public_payload, status, priority
+        )
+        VALUES ($1, $2::product_payment_method_enum, $3::shop_payment_provider_enum, $4, $5, $6::jsonb, 'ACTIVE', $7)
+        ON CONFLICT (shop_id, payment_method) DO UPDATE SET
+          provider = EXCLUDED.provider,
+          display_name = EXCLUDED.display_name,
+          encrypted_payload = EXCLUDED.encrypted_payload,
+          public_payload = EXCLUDED.public_payload,
+          status = 'ACTIVE',
+          priority = EXCLUDED.priority,
+          updated_at = NOW()`,
+      [
+        shopId,
+        cred.method,
+        cred.provider,
+        cred.displayName,
+        encryptJson(cred.secret),
+        JSON.stringify(cred.publicPayload),
+        cred.priority,
+      ],
+    );
+  }
 }
 
 async function upsertShopMember(client, userId, role) {
@@ -338,6 +436,8 @@ async function main() {
     const variantId = await seedCatalog(client);
     await seedStock(client, variantId);
     await seedCoupons(client, variantId, userId);
+    await seedTelegramBot(client);
+    await seedPaymentCredentials(client);
     await client.query('COMMIT');
     console.log('Database seed complete.');
   } catch (error) {

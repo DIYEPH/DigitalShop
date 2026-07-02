@@ -17,7 +17,10 @@ export class BindTelegramReferralUseCase {
     private readonly config: ConfigService,
   ) {}
 
-  async execute(input: TelegramReferralBindDto): Promise<TelegramReferralBindResponseDto> {
+  async execute(
+    shopId: string,
+    input: TelegramReferralBindDto,
+  ): Promise<TelegramReferralBindResponseDto> {
     const telegramId = Number(input.telegram_id);
     const code = String(input.code || '').trim();
     if (!code) {
@@ -31,6 +34,7 @@ export class BindTelegramReferralUseCase {
 
     const cfg = resolveReferralConfig(this.config);
     const result = await this.referralRepository.bindReferralByCode(
+      shopId,
       userId,
       code,
       cfg.refereeBonus,

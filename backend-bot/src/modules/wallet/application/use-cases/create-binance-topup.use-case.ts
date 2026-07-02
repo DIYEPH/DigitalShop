@@ -1,7 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { BinancePayGateway } from '../../../../integration/binance/binance-pay.gateway';
 import { ApiException } from '../../../../shared/errors/api.exception';
-import { BINANCE_PAY_GATEWAY } from '../../../../integration/binance/binance.tokens';
+import { ShopPaymentGatewaysService } from '../../../../integration/shop-payment/shop-payment-gateways.service';
 import { TOPUP_REPOSITORY } from '../../wallet.tokens';
 import { TopupRepository } from '../../domain/repositories/topup.repository';
 import {
@@ -19,11 +18,22 @@ export class CreateBinanceTelegramTopupUseCase {
   constructor(
     @Inject(TOPUP_REPOSITORY)
     private readonly topupRepository: TopupRepository,
-    @Inject(BINANCE_PAY_GATEWAY)
-    private readonly binanceGateway: BinancePayGateway,
+    private readonly shopGateways: ShopPaymentGatewaysService,
   ) {}
 
-  async execute(input: TelegramTopupBinanceCreateDto): Promise<TelegramTopupResponseDto> {
+  async execute(
+    shopId: string,
+    input: TelegramTopupBinanceCreateDto,
+  ): Promise<TelegramTopupResponseDto> {
+    const binanceGateway = await this.shopGateways.getBinance(shopId);
+    if (!binanceGateway) {
+      throw new ApiException(
+        'binance_not_configured',
+        'Binance payment is not configured for this shop.',
+        503,
+      );
+    }
+
     const amount = Number(input.amount);
     if (!Number.isFinite(amount) || amount < MIN_AMOUNT) {
       throw new ApiException('invalid_amount', `Minimum amount is ${MIN_AMOUNT} USDT.`, 400);
@@ -34,27 +44,26 @@ export class CreateBinanceTelegramTopupUseCase {
       throw new ApiException('user_not_found', 'Telegram user is not linked yet.', 404);
     }
 
-    const existing = await this.topupRepository.findActivePendingTopup(userId);
+    const existing = await this.topupRepository.findActivePendingTopup(shopId, userId);
     if (existing) {
       throw new ApiException(
         'pending_topup_exists',
         'You already have a pending topup. Complete or cancel it first.',
         409,
         {
-          topup: mapTopupCreateResponse(existing, {
-            binanceGateway: this.binanceGateway,
-          }),
+          topup: mapTopupCreateResponse(existing, { binanceGateway }),
         },
       );
     }
 
     const topup = await this.topupRepository.createBinanceTopup({
+      shopId,
       userId,
       amount,
       paymentCode: generateTopupPaymentCode(),
       expiresAt: new Date(Date.now() + TOPUP_TIMEOUT_MS),
     });
 
-    return mapTopupCreateResponse(topup, { binanceGateway: this.binanceGateway });
+    return mapTopupCreateResponse(topup, { binanceGateway });
   }
 }

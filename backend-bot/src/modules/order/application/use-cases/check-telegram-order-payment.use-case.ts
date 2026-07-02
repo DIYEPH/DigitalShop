@@ -20,8 +20,12 @@ export class CheckTelegramOrderPaymentUseCase {
     private readonly getTelegramOrderPayment: GetTelegramOrderPaymentUseCase,
   ) {}
 
-  async execute(input: TelegramOrderPaymentParams): Promise<TelegramOrderPaymentResponseDto> {
+  async execute(
+    shopId: string,
+    input: TelegramOrderPaymentParams,
+  ): Promise<TelegramOrderPaymentResponseDto> {
     const order = await this.orderRepository.findOrderPaymentForTelegram(
+      shopId,
       input.order_id,
       input.telegram_id,
     );
@@ -37,6 +41,6 @@ export class CheckTelegramOrderPaymentUseCase {
       await this.orderRepository.deliverInStockOrder(order.orderId);
     }
 
-    return this.getTelegramOrderPayment.execute(input);
+    return this.getTelegramOrderPayment.execute(shopId, input);
   }
 }

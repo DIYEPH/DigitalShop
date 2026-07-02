@@ -8,14 +8,12 @@ module.exports = {
   back: '◀️ Quay lại',
   cancel: '❌ Hủy',
   error: '💣 Hệ thống hiện không khả dụng💥 Vui lòng thử lại‼️',
-  not_enough: 'Không đủ',
   from_price: 'từ',
 
   // Main menu
   shop_name: '🚚 {name}',
   welcome: '✨ Xin chào, {name}!',
   select_product: '🛒 Chọn sản phẩm để mua:',
-  select_category: '🔖 Chọn danh mục để xem sản phẩm',
   no_products: '⛄ Chưa có sản phẩm nào!',
   profile_btn: '👤 Hồ sơ',
   history_btn: '📋 Lịch sử',
@@ -25,9 +23,7 @@ module.exports = {
   contact_admin: '💬 Liên hệ Admin',
 
   // Products
-  product_price: '💰 Giá: {price}/sp',
   product_stock: '📊 Còn: {count} sản phẩm',
-  description: 'Mô tả',
   select_variant: '🔖 Chọn gói:',
   selected_variant: 'Gói',
   variant_price: 'Giá',
@@ -40,15 +36,10 @@ module.exports = {
 
   // Payment
   payment_title: '💳 CHỌN PHƯƠNG THỨC THANH TOÁN',
-  your_balance: 'Số dư của bạn:',
   balance_label: '• Balance: {amount}',
   credits_label: '• Point: {amount}',
   select_payment: '⛄ Chọn cách thanh toán:',
-  pay_with_credits: '🎁 Dùng Point ({amount})',
-  pay_with_balance: 'Dùng Balance ({amount})',
-  pay_with_both: '🔄 Dùng cả Point + Balance',
   pay_binance: '💰 Binance Pay (USDT)',
-  pay_balance_method: '💵 Trừ số dư (USDT)',
   pay_balance_usdt: '💵 Trừ ví USDT',
   pay_balance_vnd: '💵 Trừ ví VNĐ',
   pay_crypto: '🔑 Crypto wallet',
@@ -118,7 +109,6 @@ module.exports = {
   order_expires: 'Hết hạn sau ~{minutes} phút',
   order_pending_binance_hint: '⏳ Bước tiếp: thanh toán Binance/Crypto (đang triển khai).',
   order_pending_bank_hint: '⏳ Chuyển khoản đúng số tiền và nội dung CK (mã thanh toán).',
-  order_pending_balance_hint: '⏳ Bước tiếp: trừ ví (đang triển khai).',
   check_payment: '🔄 Kiểm tra thanh toán',
   cancel_order: '❌ Hủy đơn',
   order_binance_pay_title: 'THANH TOÁN BINANCE PAY',
@@ -145,7 +135,6 @@ module.exports = {
   payment_warning: '⚠️ PHẢI nhập đúng nội dung để hệ thống tự động xác nhận!',
 
   // Payment result
-  payment_success: '✅ THANH TOÁN THÀNH CÔNG!',
   payment_pending: '❄️ Chưa nhận được thanh toán! Thử lại sau.',
 
   // Accounts delivery
@@ -167,9 +156,6 @@ module.exports = {
 
   // Balance
   balance_title: '💰 SỐ DƯ CỦA BẠN',
-  current_balance: 'Balance: {amount}',
-  current_credits: '🎁 Point: {amount}',
-  total_balance: '📊 Tổng: {amount}',
   total_assets_title: '💰 Tổng tài sản:',
 
   // Topup Binance (backend)
@@ -183,7 +169,6 @@ module.exports = {
 
   // Deposit
   deposit_title: 'NẠP TIỀN',
-  deposit_current: 'Số dư hiện tại: {amount}',
   select_deposit_method: '⛄ Chọn phương thức nạp:',
   deposit_binance: 'Binance Pay (USDT)',
   deposit_bank: '🏦 Chuyển khoản ngân hàng',
@@ -193,14 +178,7 @@ module.exports = {
   enter_amount: '📝 Nhập số tiền muốn nạp:',
   invalid_amount: '✖️ Số tiền không hợp lệ!',
   min_amount: '✖️ Số tiền tối thiểu là {amount}!',
-  deposit_success: '✅ NẠP TIỀN THÀNH CÔNG!\n\n💰 Đã cộng {amount} vào tài khoản!',
-  deposit_success_with_bonus: '✅ Nạp tiền thành công!\n\n💰 Đã cộng {amount} {currency} vào tài khoản!\n\n🎁 THƯỞNG:',
-  deposit_bonus_item: '• {eventName}: +{amount} point',
   deposit_not_found: '✖️ Không tìm thấy yêu cầu nạp tiền!',
-  expires_30_min: '⏳ Hết hạn sau {minutes} phút',
-
-  // Admin notifications
-  admin_new_deposit: '💰 NẠP TIỀN MỚI\n👤 User: {userId}\n{amount} {currency}\n📱 {method}',
 
   // Credits / Referral
   credits_title: 'POINT',
@@ -232,7 +210,6 @@ module.exports = {
   referral_rewards: '🎯 PHẦN THƯỞNG',
   referrer_bonus: '• Người giới thiệu: +{amount} point',
   referee_bonus: '• Người được giới thiệu: +{amount} point',
-  min_deposit_bonus: '(Khi nạp tối thiểu {amount})',
   copy_link_btn: '📋 Sao chép link',
 
   my_referral_title: '🔗 MÃ GIỚI THIỆU CỦA BẠN',
@@ -243,12 +220,9 @@ module.exports = {
   referrals_list_title: '👥 DANH SÁCH ĐÃ GIỚI THIỆU',
   no_referrals: '⛄ Chưa giới thiệu ai!\n\nChia sẻ mã giới thiệu để nhận point thưởng!',
   referrals_total: '📊 Tổng: {count} người',
-  referral_spent: '{name} - Chi tiêu: {amount}',
-  and_more: '\n... và {count} người khác',
 
   enter_referral_title: '📝 NHẬP MÃ GIỚI THIỆU',
   enter_code_prompt: '✏️ Nhập mã giới thiệu của bạn bè:',
-  already_has_referrer: '❌ Bạn đã có người giới thiệu rồi!',
   invalid_referral: '❌ Mã giới thiệu không hợp lệ!',
   referral_already_bound: 'ℹ️ Bạn đã nhập mã giới thiệu trước đó.',
   referral_self: '❌ Không thể dùng mã giới thiệu của chính bạn.',
@@ -267,40 +241,19 @@ module.exports = {
   history_title_cancelled: 'ĐƠN ĐÃ HỦY',
   history_back_hub: '◀️ Loại đơn',
   no_history_in_group: 'Chưa có đơn trong mục này.',
-  history_no_pending_orders: 'Bạn không có đơn đang chờ thanh toán.',
   no_history: '📋 Chưa có lịch sử mua hàng!',
   order_payment_method: 'Thanh toán',
   history_page_info: 'Trang {page}/{total}',
   history_tap_detail: '👆 Chọn đơn bên dưới để xem chi tiết',
   history_order_detail_title: 'CHI TIẾT ĐƠN',
-  history_back_list: '◀️ Danh sách đơn',
   order_status_icons: {
     completed: '✅',
     pending: '⏳',
     paid: '💳',
-    expired: '⌛',
     cancelled: '❌',
   },
 
   // Language selection
   language_title: '🌐 CHỌN NGÔN NGỮ',
   language_changed: '✅ Đã cập nhật ngôn ngữ!',
-  language_saved_local: '✅ Đã đổi trên bot. Chưa đồng bộ máy chủ — thử lại khi /start.',
-
-  // Broadcast
-  broadcast_prefix: '📣 Thông báo:',
-
-  // Admin commands
-  admin_user_not_found: '❌ User không tồn tại!',
-  admin_balance_added: '✅ Đã cộng {amount} cho user {name} ({id})',
-  admin_balance_added_notify: '🎁 Admin đã cộng {amount} vào tài khoản của bạn!',
-  admin_credits_added: '✅ Đã cộng {amount} point cho user {name} ({id})',
-  admin_credits_added_notify: '🎁 Admin đã cộng {amount} point vào tài khoản của bạn!',
-  admin_clearing_messages: '⏳ Đang xóa tin nhắn...',
-  admin_messages_cleared: '🎯 Đã xóa {count} tin nhắn!',
-  admin_event_type_error: '❌ Type phải là: promo, welcome, deposit, purchase',
-  admin_event_created: '✅ Đã tạo sự kiện #{id}\n\n📋 {name}\n🎯 +{amount} point\n{code}',
-  admin_event_error: '❌ Lỗi tạo sự kiện: {error}',
-  admin_no_orders: '📦 ĐƠN HÀNG\n━━━━━━━━━━━━━━━━━━━━━\n\n⛄ Chưa có đơn hàng nào!',
-  admin_broadcasting: '⏳ Đang gửi thông báo đến {count} users...'
 };

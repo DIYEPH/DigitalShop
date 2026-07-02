@@ -11,8 +11,8 @@ export class TelegramLoginUseCase {
     private readonly authUserRepository: AuthUserRepository,
   ) {}
 
-  async execute(input: TelegramLoginDto): Promise<TelegramAuthResponseDto> {
-    const user = await this.authUserRepository.getOrCreateByTelegramIdentity({
+  async execute(shopId: string, input: TelegramLoginDto): Promise<TelegramAuthResponseDto> {
+    const user = await this.authUserRepository.getOrCreateByTelegramIdentity(shopId, {
       telegramId: input.telegram_id,
       username: input.username,
       fullName: input.full_name,

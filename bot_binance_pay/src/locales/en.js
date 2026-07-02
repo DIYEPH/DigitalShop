@@ -8,14 +8,12 @@ module.exports = {
   back: '◀️ Back',
   cancel: '❌ Cancel',
   error: '💣 The system is currently unavailable💥 Please try again‼️',
-  not_enough: 'Not enough',
   from_price: 'from',
 
   // Main menu
   shop_name: '🚚 {name}',
   welcome: '✨ Hello, {name}!',
   select_product: '🛒 Select a product to buy:',
-  select_category: '🔖 Select a category to view products',
   no_products: '⛄ No products available!',
   profile_btn: '👤 Profile',
   history_btn: '📋 History',
@@ -25,9 +23,7 @@ module.exports = {
   contact_admin: '💬 Contact Admin',
 
   // Products
-  product_price: '💰 Price: {price}/each',
   product_stock: '📊 Stock: {count} items',
-  description: 'Description',
   select_variant: '🔖 Select plan:',
   selected_variant: 'Plan',
   variant_price: 'Price',
@@ -40,15 +36,10 @@ module.exports = {
 
   // Payment
   payment_title: '💳 SELECT PAYMENT METHOD',
-  your_balance: 'Your balance:',
   balance_label: '• Balance: {amount}',
   credits_label: '• Point: {amount}',
   select_payment: '⛄ Select payment method:',
-  pay_with_credits: '🎁 Use Point ({amount})',
-  pay_with_balance: 'Use Balance ({amount})',
-  pay_with_both: '🔄 Use Point + Balance',
   pay_binance: '💰 Binance Pay (USDT)',
-  pay_balance_method: '💵 Deduct balance (USDT)',
   pay_balance_usdt: '💵 Pay with USDT balance',
   pay_balance_vnd: '💵 Pay with VND balance',
   pay_crypto: '🔑 Crypto wallet',
@@ -118,7 +109,6 @@ module.exports = {
   order_expires: 'Expires in ~{minutes} min',
   order_pending_binance_hint: '⏳ Next: complete Binance/Crypto payment (coming soon).',
   order_pending_bank_hint: '⏳ Transfer the exact amount with the payment code in the transfer note.',
-  order_pending_balance_hint: '⏳ Next: balance checkout (coming soon).',
   check_payment: '🔄 Check Payment',
   cancel_order: '❌ Cancel Order',
   order_binance_pay_title: 'BINANCE PAY CHECKOUT',
@@ -145,7 +135,6 @@ module.exports = {
   payment_warning: '⚠️ MUST enter correct note for auto-confirmation!',
 
   // Payment result
-  payment_success: '✅ PAYMENT SUCCESSFUL!',
   payment_pending: '❄️ Payment not received yet! Try again later.',
 
   // Accounts delivery
@@ -167,9 +156,6 @@ module.exports = {
 
   // Balance
   balance_title: '💰 YOUR BALANCE',
-  current_balance: 'Balance: {amount}',
-  current_credits: '🎁 Point: {amount}',
-  total_balance: '📊 Total: {amount}',
   total_assets_title: '💰 Total assets:',
 
   // Topup Binance (backend)
@@ -183,7 +169,6 @@ module.exports = {
 
   // Deposit
   deposit_title: 'DEPOSIT',
-  deposit_current: 'Current balance: {amount}',
   select_deposit_method: '⛄ Select deposit method:',
   deposit_binance: 'Binance Pay (USDT)',
   deposit_bank: '🏦 Bank Transfer',
@@ -193,14 +178,7 @@ module.exports = {
   enter_amount: '📝 Enter amount to deposit:',
   invalid_amount: '✖️ Invalid amount!',
   min_amount: '✖️ Minimum amount is {amount}!',
-  deposit_success: '✅ DEPOSIT SUCCESSFUL!\n\n💰 Added {amount} to your account!',
-  deposit_success_with_bonus: '✅ Deposit successful!\n\n💰 Added {amount} {currency} to your account!\n\n🎁 BONUS:',
-  deposit_bonus_item: '• {eventName}: +{amount} point',
   deposit_not_found: '✖️ Deposit request not found!',
-  expires_30_min: '⏳ Expires in {minutes} minutes',
-
-  // Admin notifications
-  admin_new_deposit: '💰 NEW DEPOSIT\n👤 User: {userId}\n{amount} {currency}\n📱 {method}',
 
   // Credits / Referral
   credits_title: 'POINT',
@@ -232,7 +210,6 @@ module.exports = {
   referral_rewards: '🎯 REWARDS',
   referrer_bonus: '• Referrer gets: +{amount} point',
   referee_bonus: '• New user gets: +{amount} point',
-  min_deposit_bonus: '(When depositing at least {amount})',
   copy_link_btn: '📋 Copy Link',
 
   my_referral_title: '🔗 YOUR REFERRAL CODE',
@@ -243,12 +220,9 @@ module.exports = {
   referrals_list_title: '👥 YOUR REFERRALS',
   no_referrals: '⛄ No referrals yet!\n\nShare your referral code to earn point!',
   referrals_total: '📊 Total: {count} people',
-  referral_spent: '{name} - Spent: {amount}',
-  and_more: '\n... and {count} more',
 
   enter_referral_title: '📝 ENTER REFERRAL CODE',
   enter_code_prompt: '✏️ Enter your friend\'s referral code:',
-  already_has_referrer: '❌ You already have a referrer!',
   invalid_referral: '❌ Invalid referral code!',
   referral_already_bound: 'ℹ️ You have already entered a referral code.',
   referral_self: '❌ You cannot use your own referral code.',
@@ -267,40 +241,19 @@ module.exports = {
   history_title_cancelled: 'CANCELLED ORDERS',
   history_back_hub: '◀️ Order types',
   no_history_in_group: 'No orders in this section.',
-  history_no_pending_orders: 'You have no pending orders.',
   no_history: '📋 No purchase history yet!',
   order_payment_method: 'Payment',
   history_page_info: 'Page {page}/{total}',
   history_tap_detail: '👆 Tap an order below for details',
   history_order_detail_title: 'ORDER DETAIL',
-  history_back_list: '◀️ Order list',
   order_status_icons: {
     completed: '✅',
     pending: '⏳',
     paid: '💳',
-    expired: '⌛',
     cancelled: '❌',
   },
 
   // Language selection
   language_title: '🌐 𝙎𝙚𝙡𝙚𝙘𝙩 𝙇𝙖𝙣𝙜𝙪𝙖𝙜𝙚',
   language_changed: '✅ Language updated!',
-  language_saved_local: '✅ Updated on bot. Server sync failed — will retry on next /start.',
-
-  // Broadcast
-  broadcast_prefix: '📣 Announcement:',
-
-  // Admin commands
-  admin_user_not_found: '❌ User not found!',
-  admin_balance_added: '✅ Added {amount} to user {name} ({id})',
-  admin_balance_added_notify: '🎁 Admin added {amount} to your account!',
-  admin_credits_added: '✅ Added {amount} point to user {name} ({id})',
-  admin_credits_added_notify: '🎁 Admin added {amount} point to your account!',
-  admin_clearing_messages: '⏳ Clearing messages...',
-  admin_messages_cleared: '🎯 Cleared {count} messages!',
-  admin_event_type_error: '❌ Type must be: promo, welcome, deposit, purchase',
-  admin_event_created: '✅ Event created #{id}\n\n📋 {name}\n🎯 +{amount} point\n{code}',
-  admin_event_error: '❌ Error creating event: {error}',
-  admin_no_orders: '📦 ORDERS\n━━━━━━━━━━━━━━━━━━━━━\n\n⛄ No orders yet!',
-  admin_broadcasting: '⏳ Broadcasting to {count} users...'
 };

@@ -12,9 +12,8 @@ import { COUPON_REPOSITORY } from '../../../coupon/coupon.tokens';
 import { CouponRepository } from '../../../coupon/domain/repositories/coupon.repository';
 import { buildTelegramOrderLinePricing } from '../helpers/build-telegram-order-pricing';
 import { assertBankCheckoutConfigured } from '../../../../integration/bank/bank-checkout';
-import { SepayGateway } from '../../../../integration/bank/sepay.gateway';
+import { ShopPaymentGatewaysService } from '../../../../integration/shop-payment/shop-payment-gateways.service';
 import { OrderRepository } from '../../domain/repositories/order.repository';
-import { SEPAY_GATEWAY } from '../../../../integration/bank/bank.tokens';
 import { ORDER_REPOSITORY } from '../../order.tokens';
 import {
   TelegramOrderCreateDto,
@@ -27,11 +26,13 @@ export class CreateTelegramOrderUseCase {
     private readonly orderRepository: OrderRepository,
     @Inject(COUPON_REPOSITORY)
     private readonly couponRepository: CouponRepository,
-    @Inject(SEPAY_GATEWAY)
-    private readonly sepayGateway: SepayGateway,
+    private readonly shopGateways: ShopPaymentGatewaysService,
   ) {}
 
-  async execute(input: TelegramOrderCreateDto): Promise<TelegramOrderCreateResponseDto> {
+  async execute(
+    shopId: string,
+    input: TelegramOrderCreateDto,
+  ): Promise<TelegramOrderCreateResponseDto> {
     const quantity = Number(input.quantity);
     if (!Number.isInteger(quantity) || quantity < 1) {
       throw new ApiException('invalid_quantity', 'Quantity must be at least 1.', 400);
@@ -42,7 +43,10 @@ export class CreateTelegramOrderUseCase {
       throw new ApiException('user_not_found', 'Telegram user is not linked yet.', 404);
     }
 
-    const variant = await this.orderRepository.findActiveVariantById(Number(input.variant_id));
+    const variant = await this.orderRepository.findActiveVariantById(
+      shopId,
+      Number(input.variant_id),
+    );
     if (!variant) {
       throw new ApiException('variant_not_found', 'Variant not found or inactive.', 404);
     }
@@ -54,10 +58,20 @@ export class CreateTelegramOrderUseCase {
     assertPaymentMethodAllowed(input.payment_method, variant.paymentMethods);
 
     if (input.payment_method === 'BANK') {
-      assertBankCheckoutConfigured(this.sepayGateway);
+      assertBankCheckoutConfigured(await this.shopGateways.getSepay(shopId));
+    }
+    if (input.payment_method === 'BINANCE') {
+      const binance = await this.shopGateways.getBinance(shopId);
+      if (!binance) {
+        throw new ApiException(
+          'binance_not_configured',
+          'Binance Pay is not configured for this shop.',
+          400,
+        );
+      }
     }
 
-    const existingPending = await this.orderRepository.findActivePendingOrder(userId);
+    const existingPending = await this.orderRepository.findActivePendingOrder(shopId, userId);
     if (existingPending) {
       throw new ApiException(
         'pending_order_exists',
@@ -77,6 +91,7 @@ export class CreateTelegramOrderUseCase {
     const { resolved, pricing } = await buildTelegramOrderLinePricing(
       this.orderRepository,
       this.couponRepository,
+      shopId,
       variant,
       quantity,
       userId,
@@ -91,6 +106,7 @@ export class CreateTelegramOrderUseCase {
     const totalPrice = totalPriceForPaymentMethod(pricing, input.payment_method);
     const unitPrice = unitPriceForPaymentMethod(pricing, input.payment_method);
     const created = await this.orderRepository.createTelegramPendingOrder({
+      shopId,
       userId,
       variant,
       quantity,
@@ -106,9 +122,14 @@ export class CreateTelegramOrderUseCase {
     if (input.payment_method === 'BALANCE' || input.payment_method === 'BALANCE_VND') {
       let paid: { deliveryLines: string[] };
       try {
-        paid = await this.orderRepository.payWithBalance(created.id, userId, input.payment_method);
+        paid = await this.orderRepository.payWithBalance(
+          shopId,
+          created.id,
+          userId,
+          input.payment_method,
+        );
       } catch (err) {
-        await this.orderRepository.cancelPendingOrder(userId, created.id).catch(() => {});
+        await this.orderRepository.cancelPendingOrder(shopId, userId, created.id).catch(() => {});
         throw err;
       }
       return {

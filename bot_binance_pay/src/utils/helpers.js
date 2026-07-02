@@ -18,34 +18,16 @@ function formatPrice(price, currency = 'USDT') {
   return `${rounded} USDT`;
 }
 
-function formatNumber(num) {
-  return String(num);
-}
-
-function isAdmin(userId) { return config.ADMIN_IDS.includes(userId); }
-
 function getFullName(user) {
   return (user.first_name + (user.last_name ? ' ' + user.last_name : '')).trim();
 }
 
-function generateCode(existingCodes = new Set(), length = 8) {
-  let code;
-  let attempts = 0;
-  do {
-    code = Math.random().toString(36).substring(2, 2 + length).toUpperCase();
-    attempts++;
-  } while (existingCodes.has(code) && attempts < 100);
-  return code;
-}
-
-function generateReferralCode(userId) {
-  const base = userId.toString(36).toUpperCase();
-  const random = Math.random().toString(36).substring(2, 5).toUpperCase();
-  return base + random;
-}
-
-function getAdminUsername() {
-  return String(config.ADMIN_USER_NAME ?? '').trim().replace('@', '');
+/** Shop support link (shops.support_url); accepts a full URL or @username. */
+function getSupportUrl() {
+  const raw = String(config.SUPPORT_URL ?? '').trim();
+  if (!raw) return null;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return `https://t.me/${raw.replace(/^@/, '')}`;
 }
 
 function formatDateShort(date) {
@@ -101,25 +83,14 @@ function wideInlineLabel(visible) {
   return v + ' '.repeat(spaces) + ZWJ;
 }
 
-function tgEmojiText(emojiId, fallbackEmoji = '📂') {
-  if (!emojiId) return fallbackEmoji;
-  return `<tg-emoji emoji-id="${emojiId}">${fallbackEmoji}</tg-emoji>`;
-}
-
 module.exports = {
-  POINT_DISPLAY_CURRENCY,
   formatPoint,
   formatPrice,
-  formatNumber,
-  isAdmin,
   getFullName,
-  generateCode,
-  generateReferralCode,
-  getAdminUsername,
+  getSupportUrl,
   formatDateShort,
   formatCategoryPrice,
   formatVariantPrice,
   buildVariantLabel,
   wideInlineLabel,
-  tgEmojiText,
 };

@@ -2,6 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { Pool } from 'pg';
 import { ApiException } from '../../../../../shared/errors/api.exception';
 import { parsePgEnumArray } from '../../../../../shared/infrastructure/pg-enum-array';
+import {
+  assertShopCustomerNotBanned,
+  upsertShopCustomer,
+} from '../../../../../shared/infrastructure/shop-customer';
 import { CreatedOrderEntity } from '../../../domain/entities/created-order.entity';
 import { OrderDetailEntity } from '../../../domain/entities/order-detail.entity';
 import { OrderListItemEntity } from '../../../domain/entities/order-list-item.entity';
@@ -39,7 +43,10 @@ export class PgOrderRepository implements OrderRepository {
     return result.rows[0]?.id ?? null;
   }
 
-  async findActiveVariantById(variantId: number): Promise<VariantForOrderRow | null> {
+  async findActiveVariantById(
+    shopId: string,
+    variantId: number,
+  ): Promise<VariantForOrderRow | null> {
     const result = await this.pool.query<{
       id: number;
       product_id: number;
@@ -55,22 +62,23 @@ export class PgOrderRepository implements OrderRepository {
       payment_methods: unknown;
     }>(
       `SELECT
-          id,
-          product_id,
-          name_en,
-          name_vi,
-          fulfillment_type,
-          preorder_limit,
-          warranty_type,
-          warranty_value,
-          warranty_unit,
-          amount_usdt,
-          amount_vnd,
-          payment_methods
-        FROM product_variants
-        WHERE id = $1 AND is_active = TRUE
+          v.id,
+          v.product_id,
+          v.name_en,
+          v.name_vi,
+          v.fulfillment_type,
+          v.preorder_limit,
+          v.warranty_type,
+          v.warranty_value,
+          v.warranty_unit,
+          v.amount_usdt,
+          v.amount_vnd,
+          v.payment_methods
+        FROM product_variants v
+        INNER JOIN products p ON p.id = v.product_id
+        WHERE v.id = $1 AND v.is_active = TRUE AND p.shop_id = $2::uuid
         LIMIT 1`,
-      [variantId],
+      [variantId, shopId],
     );
     const row = result.rows[0];
     if (!row) return null;
@@ -121,7 +129,7 @@ export class PgOrderRepository implements OrderRepository {
     }));
   }
 
-  async findCouponByCode(code: string): Promise<CouponRow | null> {
+  async findCouponByCode(shopId: string, code: string): Promise<CouponRow | null> {
     const result = await this.pool.query<{
       id: number;
       code: string;
@@ -144,9 +152,9 @@ export class PgOrderRepository implements OrderRepository {
           amount_usdt, amount_vnd,
           max_redemptions, per_user_limit
         FROM coupons
-        WHERE UPPER(code) = UPPER($1)
+        WHERE UPPER(code) = UPPER($1) AND shop_id = $2::uuid
         LIMIT 1`,
-      [code.trim()],
+      [code.trim(), shopId],
     );
     const row = result.rows[0];
     if (!row) return null;
@@ -188,7 +196,7 @@ export class PgOrderRepository implements OrderRepository {
     };
   }
 
-  async findActivePendingOrder(userId: number): Promise<PendingOrderEntity | null> {
+  async findActivePendingOrder(shopId: string, userId: number): Promise<PendingOrderEntity | null> {
     const result = await this.pool.query<{
       id: string;
       payment_code: string;
@@ -213,10 +221,11 @@ export class PgOrderRepository implements OrderRepository {
         FROM orders o
         INNER JOIN order_items oi ON oi.order_id = o.id
         WHERE o.user_id = $1
+          AND o.shop_id = $2::uuid
           AND o.status = 'PENDING'
         ORDER BY o.created_at DESC
         LIMIT 1`,
-      [userId],
+      [userId, shopId],
     );
     const row = result.rows[0];
     if (!row) return null;
@@ -236,7 +245,7 @@ export class PgOrderRepository implements OrderRepository {
     if (TIMED_PENDING_METHODS.has(pending.paymentMethod)) {
       const expiry = buildOrderExpiry(pending.createdAt, pending.paymentMethod);
       if ((expiry.secondsLeft ?? 0) <= 0) {
-        await this.cancelPendingOrder(userId, pending.orderId);
+        await this.cancelPendingOrder(shopId, userId, pending.orderId);
         return null;
       }
     }
@@ -279,12 +288,12 @@ export class PgOrderRepository implements OrderRepository {
     return { cancelledCount: Number(result.rows[0]?.cancelled_count ?? 0) };
   }
 
-  async cancelPendingOrder(userId: number, orderId: string): Promise<boolean> {
+  async cancelPendingOrder(shopId: string, userId: number, orderId: string): Promise<boolean> {
     const result = await this.pool.query<{ id: string }>(
       `WITH cancel AS (
           UPDATE orders
           SET status = 'CANCELLED', updated_at = NOW()
-          WHERE id = $1::uuid AND user_id = $2 AND status = 'PENDING'
+          WHERE id = $1::uuid AND user_id = $2 AND shop_id = $3::uuid AND status = 'PENDING'
           RETURNING id
         ),
         release AS (
@@ -298,7 +307,7 @@ export class PgOrderRepository implements OrderRepository {
           WHERE stock_items.order_id = cancel.id AND stock_items.status = 'RESERVED'
         )
         SELECT id::text FROM cancel`,
-      [orderId, userId],
+      [orderId, userId, shopId],
     );
     return result.rows.length > 0;
   }
@@ -307,6 +316,9 @@ export class PgOrderRepository implements OrderRepository {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
+
+      await assertShopCustomerNotBanned(client, params.shopId, params.userId);
+      await upsertShopCustomer(client, params.shopId, params.userId);
 
       if (params.variant.fulfillmentType === 'PREORDER' && params.variant.preorderLimit != null) {
         const soldResult = await client.query<{ sold: string }>(
@@ -441,6 +453,7 @@ export class PgOrderRepository implements OrderRepository {
       created_at: Date;
     }>(
       `INSERT INTO orders (
+          shop_id,
           user_id,
           payment_code,
           total_price,
@@ -448,7 +461,7 @@ export class PgOrderRepository implements OrderRepository {
           payment_method,
           coupon_id,
           status
-        ) VALUES ($1, NULL, $2, $3::currency_enum, $4::product_payment_method_enum, $5, 'PENDING')
+        ) VALUES ($1::uuid, $2, NULL, $3, $4::currency_enum, $5::product_payment_method_enum, $6, 'PENDING')
         RETURNING
           id::text,
           payment_code,
@@ -457,7 +470,14 @@ export class PgOrderRepository implements OrderRepository {
           currency::text,
           total_price,
           created_at`,
-      [params.userId, params.totalPrice, params.currency, params.paymentMethod, params.couponId ?? null],
+      [
+        params.shopId,
+        params.userId,
+        params.totalPrice,
+        params.currency,
+        params.paymentMethod,
+        params.couponId ?? null,
+      ],
     );
     const row = result.rows[0];
     return {
@@ -488,6 +508,7 @@ export class PgOrderRepository implements OrderRepository {
           created_at: Date;
         }>(
           `INSERT INTO orders (
+              shop_id,
               user_id,
               payment_code,
               total_price,
@@ -495,7 +516,7 @@ export class PgOrderRepository implements OrderRepository {
               payment_method,
               coupon_id,
               status
-            ) VALUES ($1, $2, $3, $4::currency_enum, $5::product_payment_method_enum, $6, 'PENDING')
+            ) VALUES ($1::uuid, $2, $3, $4, $5::currency_enum, $6::product_payment_method_enum, $7, 'PENDING')
             RETURNING
               id::text,
               payment_code,
@@ -505,6 +526,7 @@ export class PgOrderRepository implements OrderRepository {
               total_price,
               created_at`,
           [
+            params.shopId,
             params.userId,
             paymentCode,
             params.totalPrice,
@@ -533,11 +555,13 @@ export class PgOrderRepository implements OrderRepository {
   }
 
   async findOrderPaymentForTelegram(
+    shopId: string,
     orderId: string,
     telegramId: number,
   ): Promise<OrderPaymentEntity | null> {
     const result = await this.pool.query<{
       id: string;
+      shop_id: string;
       status: string;
       payment_method: string;
       currency: string;
@@ -546,18 +570,19 @@ export class PgOrderRepository implements OrderRepository {
       created_at: Date;
       tx_id: string | null;
     }>(
-      `SELECT o.id::text, o.status::text, o.payment_method::text, o.currency::text,
+      `SELECT o.id::text, o.shop_id::text, o.status::text, o.payment_method::text, o.currency::text,
               o.total_price, o.payment_code, o.created_at, o.tx_id
         FROM orders o
         INNER JOIN users u ON u.id = o.user_id
-        WHERE o.id = $1::uuid AND u.telegram_id = $2
+        WHERE o.id = $1::uuid AND u.telegram_id = $2 AND o.shop_id = $3::uuid
         LIMIT 1`,
-      [orderId, telegramId],
+      [orderId, telegramId, shopId],
     );
     const row = result.rows[0];
     if (!row) return null;
     return {
       orderId: row.id,
+      shopId: row.shop_id,
       status: row.status,
       paymentMethod: row.payment_method,
       currency: row.currency,
@@ -581,6 +606,7 @@ export class PgOrderRepository implements OrderRepository {
   ): Promise<OrderPaymentEntity[]> {
     const result = await this.pool.query<{
       id: string;
+      shop_id: string;
       status: string;
       payment_method: string;
       currency: string;
@@ -589,17 +615,18 @@ export class PgOrderRepository implements OrderRepository {
       created_at: Date;
       tx_id: string | null;
     }>(
-      `SELECT o.id::text, o.status::text, o.payment_method::text, o.currency::text,
+      `SELECT o.id::text, o.shop_id::text, o.status::text, o.payment_method::text, o.currency::text,
               o.total_price, o.payment_code, o.created_at, o.tx_id
         FROM orders o
         WHERE o.status = 'PENDING'
           AND o.payment_method = $2::product_payment_method_enum
           AND o.created_at >= NOW() - ($1::bigint * INTERVAL '1 millisecond')
-        ORDER BY o.created_at ASC`,
+        ORDER BY o.shop_id, o.created_at ASC`,
       [PENDING_PAYMENT_TIMEOUT_MS, paymentMethod],
     );
     return result.rows.map((row) => ({
       orderId: row.id,
+      shopId: row.shop_id,
       status: row.status,
       paymentMethod: row.payment_method,
       currency: row.currency,
@@ -742,10 +769,11 @@ export class PgOrderRepository implements OrderRepository {
           COUNT(*) OVER()::text AS total_count
         FROM orders o
         WHERE o.user_id = $1
+          AND o.shop_id = $5::uuid
           AND ($4::text[] IS NULL OR o.status::text = ANY($4::text[]))
         ORDER BY o.created_at DESC
         LIMIT $2 OFFSET $3`,
-      [params.userId, limit, offset, statuses],
+      [params.userId, limit, offset, statuses, params.shopId],
     );
 
     const total = result.rows.length ? Number(result.rows[0].total_count) : 0;
@@ -765,6 +793,7 @@ export class PgOrderRepository implements OrderRepository {
   }
 
   async findTelegramOrderDetail(
+    shopId: string,
     orderId: string,
     userId: number,
   ): Promise<OrderDetailEntity | null> {
@@ -817,9 +846,9 @@ export class PgOrderRepository implements OrderRepository {
             WHERE si.order_id = o.id AND si.status = 'DELIVERED'
           ) AS delivery_lines
         FROM orders o
-        WHERE o.id = $1::uuid AND o.user_id = $2
+        WHERE o.id = $1::uuid AND o.user_id = $2 AND o.shop_id = $3::uuid
         LIMIT 1`,
-      [orderId, userId],
+      [orderId, userId, shopId],
     );
 
     if (!result.rows[0]) return null;
@@ -849,6 +878,7 @@ export class PgOrderRepository implements OrderRepository {
   }
 
   async payWithBalance(
+    shopId: string,
     orderId: string,
     userId: number,
     paymentMethod: 'BALANCE' | 'BALANCE_VND',
@@ -861,26 +891,26 @@ export class PgOrderRepository implements OrderRepository {
     try {
       await client.query('BEGIN');
 
-      const userRow = await client.query<{ balance: string }>(
-        `SELECT ${balanceCol} AS balance FROM users WHERE id = $1 FOR UPDATE`,
-        [userId],
+      const balanceRow = await client.query<{ balance: string }>(
+        `SELECT ${balanceCol} AS balance
+         FROM user_shop_balances
+         WHERE user_id = $1 AND shop_id = $2::uuid
+         FOR UPDATE`,
+        [userId, shopId],
       );
-      if (!userRow.rows[0]) {
-        throw new ApiException('user_not_found', 'User not found.', 404);
-      }
 
       const orderRow = await client.query<{ total_price: string }>(
         `SELECT total_price FROM orders
-         WHERE id = $1::uuid AND user_id = $2 AND status = 'PENDING'
+         WHERE id = $1::uuid AND user_id = $2 AND shop_id = $4::uuid AND status = 'PENDING'
            AND payment_method = $3::product_payment_method_enum
          FOR UPDATE`,
-        [orderId, userId, paymentMethod],
+        [orderId, userId, paymentMethod, shopId],
       );
       if (!orderRow.rows[0]) {
         throw new ApiException('order_not_found', 'Order not found or not in PENDING state.', 404);
       }
 
-      const balance = Number(userRow.rows[0].balance);
+      const balance = Number(balanceRow.rows[0]?.balance ?? 0);
       const totalPrice = Number(orderRow.rows[0].total_price);
       if (balance < totalPrice) {
         throw new ApiException(insufficientCode, 'Insufficient balance.', 400);
@@ -890,11 +920,11 @@ export class PgOrderRepository implements OrderRepository {
       // undefined behaviour khi hai CTE sửa cùng row trong orders.
       const result = await client.query<{ payload: string }>(
         `WITH deduct AS (
-            UPDATE users
+            UPDATE user_shop_balances
             SET ${balanceCol} = ${balanceCol} - $3::numeric,
                 updated_at = NOW()
-            WHERE id = $2
-            RETURNING id
+            WHERE user_id = $2 AND shop_id = $4::uuid
+            RETURNING user_id
           ),
           deliver_order AS (
             UPDATE orders
@@ -902,7 +932,7 @@ export class PgOrderRepository implements OrderRepository {
                 paid_at = NOW(),
                 delivered_at = NOW(),
                 updated_at = NOW()
-            WHERE id = $1::uuid AND (SELECT id FROM deduct) IS NOT NULL
+            WHERE id = $1::uuid AND (SELECT user_id FROM deduct) IS NOT NULL
             RETURNING id
           ),
           deliver_stock AS (
@@ -915,7 +945,7 @@ export class PgOrderRepository implements OrderRepository {
             RETURNING payload, created_at
           )
           SELECT payload FROM deliver_stock ORDER BY created_at ASC`,
-        [orderId, userId, totalPrice],
+        [orderId, userId, totalPrice, shopId],
       );
 
       await client.query('COMMIT');

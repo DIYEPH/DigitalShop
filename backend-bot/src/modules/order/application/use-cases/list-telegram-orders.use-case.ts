@@ -17,7 +17,10 @@ export class ListTelegramOrdersUseCase {
     private readonly orderRepository: OrderRepository,
   ) {}
 
-  async execute(query: TelegramOrderListQueryDto): Promise<TelegramOrderListResponseDto> {
+  async execute(
+    shopId: string,
+    query: TelegramOrderListQueryDto,
+  ): Promise<TelegramOrderListResponseDto> {
     const userId = await this.orderRepository.findUserIdByTelegramId(Number(query.telegram_id));
     if (!userId) {
       throw new ApiException('user_not_found', 'Telegram user is not linked yet.', 404);
@@ -28,6 +31,7 @@ export class ListTelegramOrdersUseCase {
     const limit = Math.min(MAX_LIMIT, limitRaw);
 
     const { items, total } = await this.orderRepository.listTelegramOrdersByUserId({
+      shopId,
       userId,
       page,
       limit,

@@ -7,6 +7,7 @@ import { ResolveOrderCouponInput, resolveOrderCoupon } from './resolve-order-cou
 export async function buildTelegramOrderLinePricing(
   orderRepository: OrderRepository,
   couponRepository: CouponRepository,
+  shopId: string,
   variant: VariantForOrderRow,
   quantity: number,
   userId: number,
@@ -16,6 +17,7 @@ export async function buildTelegramOrderLinePricing(
   const resolved = await resolveOrderCoupon(
     orderRepository,
     couponRepository,
+    shopId,
     couponInput,
     variant.id,
     userId,

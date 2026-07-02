@@ -1,8 +1,6 @@
 const { formatPrice, formatDateShort } = require('./helpers');
 const { formatOrderPaymentHints } = require('./checkout');
 
-const HISTORY_GROUPS = ['completed', 'pending', 'cancelled'];
-
 function mapOrderStatusIcon(t, status) {
   const key = {
     PENDING: 'pending',
@@ -188,7 +186,6 @@ function parseHistoryListCallback(data) {
 }
 
 module.exports = {
-  HISTORY_GROUPS,
   mapOrderStatusIcon,
   formatHistoryListMessage,
   formatHistoryHubMessage,

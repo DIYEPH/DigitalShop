@@ -74,10 +74,13 @@ jobs:
           cache-from: type=gha,scope=admin-backend
           cache-to: type=gha,mode=max,scope=admin-backend
 
+      # The backend-bot image bundles bot_binance_pay; BotRunnerManager runs
+      # one bot instance per ACTIVE shop, so no separate bot image is built.
       - name: Build backend-bot
         uses: docker/build-push-action@v6
         with:
-          context: ./backend-bot
+          context: .
+          file: ./backend-bot/Dockerfile
           platforms: ${{ env.PLATFORM }}
           push: true
           tags: |
@@ -85,18 +88,6 @@ jobs:
             ${{ env.REGISTRY }}/${{ steps.names.outputs.namespace }}/backend-bot:latest
           cache-from: type=gha,scope=backend-bot
           cache-to: type=gha,mode=max,scope=backend-bot
-
-      - name: Build bot-binance-pay
-        uses: docker/build-push-action@v6
-        with:
-          context: ./bot_binance_pay
-          platforms: ${{ env.PLATFORM }}
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ steps.names.outputs.namespace }}/bot-binance-pay:${{ steps.names.outputs.tag }}
-            ${{ env.REGISTRY }}/${{ steps.names.outputs.namespace }}/bot-binance-pay:latest
-          cache-from: type=gha,scope=bot-binance-pay
-          cache-to: type=gha,mode=max,scope=bot-binance-pay
 
   deploy:
     name: Deploy to VPS
@@ -149,7 +140,6 @@ jobs:
           ADMIN_FRONTEND_IMAGE="${REGISTRY}/${IMAGE_NAMESPACE}/admin-frontend:${IMAGE_TAG}"
           ADMIN_BACKEND_IMAGE="${REGISTRY}/${IMAGE_NAMESPACE}/admin-backend:${IMAGE_TAG}"
           BACKEND_BOT_IMAGE="${REGISTRY}/${IMAGE_NAMESPACE}/backend-bot:${IMAGE_TAG}"
-          BOT_BINANCE_PAY_IMAGE="${REGISTRY}/${IMAGE_NAMESPACE}/bot-binance-pay:${IMAGE_TAG}"
 
           ssh -i ~/.ssh/deploy_key "$VPS_USER@$VPS_HOST" \
             "cd '$VPS_DEPLOY_PATH' && \
@@ -157,11 +147,9 @@ jobs:
              ADMIN_FRONTEND_IMAGE='$ADMIN_FRONTEND_IMAGE' \
              ADMIN_BACKEND_IMAGE='$ADMIN_BACKEND_IMAGE' \
              BACKEND_BOT_IMAGE='$BACKEND_BOT_IMAGE' \
-             BOT_BINANCE_PAY_IMAGE='$BOT_BINANCE_PAY_IMAGE' \
              docker compose pull && \
              ADMIN_FRONTEND_IMAGE='$ADMIN_FRONTEND_IMAGE' \
              ADMIN_BACKEND_IMAGE='$ADMIN_BACKEND_IMAGE' \
              BACKEND_BOT_IMAGE='$BACKEND_BOT_IMAGE' \
-             BOT_BINANCE_PAY_IMAGE='$BOT_BINANCE_PAY_IMAGE' \
              docker compose up -d --remove-orphans && \
              docker image prune -f"

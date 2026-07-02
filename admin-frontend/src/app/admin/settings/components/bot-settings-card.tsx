@@ -30,11 +30,14 @@ type Props = {
     setBotUsername: (value: string) => void;
     savingBot: boolean;
     saveBot: () => Promise<void>;
+    togglingBot: boolean;
+    toggleBotStatus: () => Promise<void>;
   };
 };
 
 export function BotSettingsCard({ t, shop, bot, form }: Props) {
   const configured = Boolean(bot?.configured);
+  const active = bot?.status === "ACTIVE";
 
   return (
     <Card
@@ -55,12 +58,29 @@ export function BotSettingsCard({ t, shop, bot, form }: Props) {
         }}
         className="grid gap-3"
       >
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge variant={configured ? "success" : "accent"}>
             {configured ? t("common.configured") : t("common.notConfigured")}
           </Badge>
+          {configured ? (
+            <Badge variant={active ? "success" : "accent"}>
+              {active ? t("settings.botRunning") : t("settings.botStopped")}
+            </Badge>
+          ) : null}
           {bot?.bot_username ? (
             <span className="text-xs font-black">@{bot.bot_username}</span>
+          ) : null}
+          {configured ? (
+            <Button
+              type="button"
+              variant={active ? "danger" : "primary"}
+              size="sm"
+              loading={form.togglingBot}
+              onClick={() => void form.toggleBotStatus()}
+              className="ml-auto"
+            >
+              {active ? t("settings.disableBot") : t("settings.enableBot")}
+            </Button>
           ) : null}
         </div>
         <label className="grid gap-1.5">

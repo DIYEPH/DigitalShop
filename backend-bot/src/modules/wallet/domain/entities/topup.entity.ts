@@ -3,6 +3,7 @@ export type TopupCurrency = 'USDT' | 'VND';
 
 export interface TopupEntity {
   id: number;
+  shopId: string;
   userId: number;
   provider: TopupProvider;
   currency: TopupCurrency;

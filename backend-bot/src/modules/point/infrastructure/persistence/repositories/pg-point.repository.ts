@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Pool } from 'pg';
 import {
+  assertShopCustomerNotBanned,
+  upsertShopCustomer,
+} from '../../../../../shared/infrastructure/shop-customer';
+import {
   DailyLoginClaimResult,
   DailyLoginStatusSnapshot,
   PointRepository,
@@ -23,6 +27,7 @@ export class PgPointRepository implements PointRepository {
   }
 
   async getDailyLoginStatusByTelegramId(
+    shopId: string,
     telegramId: number,
     claimDate: string,
     timezone: string,
@@ -40,10 +45,10 @@ export class PgPointRepository implements PointRepository {
           END AS next_claim_at
         FROM users u
         LEFT JOIN daily_login_point_claims c
-          ON c.user_id = u.id AND c.claim_date = $2::date
+          ON c.user_id = u.id AND c.claim_date = $2::date AND c.shop_id = $4::uuid
         WHERE u.telegram_id = $1
         LIMIT 1`,
-      [telegramId, claimDate, timezone],
+      [telegramId, claimDate, timezone, shopId],
     );
 
     const row = result.rows[0];
@@ -56,6 +61,7 @@ export class PgPointRepository implements PointRepository {
   }
 
   async claimDailyLogin(
+    shopId: string,
     userId: number,
     claimDate: string,
     pointsAwarded: number,
@@ -64,12 +70,15 @@ export class PgPointRepository implements PointRepository {
     try {
       await client.query('BEGIN');
 
+      await assertShopCustomerNotBanned(client, shopId, userId);
+      await upsertShopCustomer(client, shopId, userId);
+
       const claimInsert = await client.query<{ id: number }>(
-        `INSERT INTO daily_login_point_claims (user_id, claim_date, points_awarded)
-         VALUES ($1, $2::date, $3)
-         ON CONFLICT (user_id, claim_date) DO NOTHING
+        `INSERT INTO daily_login_point_claims (shop_id, user_id, claim_date, points_awarded)
+         VALUES ($1::uuid, $2, $3::date, $4)
+         ON CONFLICT (shop_id, user_id, claim_date) WHERE shop_id IS NOT NULL DO NOTHING
          RETURNING id`,
-        [userId, claimDate, pointsAwarded],
+        [shopId, userId, claimDate, pointsAwarded],
       );
       if ((claimInsert.rowCount ?? 0) === 0) {
         await client.query('ROLLBACK');
@@ -77,18 +86,19 @@ export class PgPointRepository implements PointRepository {
       }
 
       await client.query(
-        `INSERT INTO point_transactions (user_id, amount, type)
-         VALUES ($1, $2, 'EARN'::point_tx_type_enum)`,
-        [userId, pointsAwarded],
+        `INSERT INTO point_transactions (shop_id, user_id, amount, type)
+         VALUES ($1::uuid, $2, $3, 'EARN'::point_tx_type_enum)`,
+        [shopId, userId, pointsAwarded],
       );
 
       const balanceResult = await client.query<{ balance_point: string }>(
-        `UPDATE users
-            SET balance_point = balance_point + $2,
-                updated_at = NOW()
-          WHERE id = $1
-          RETURNING balance_point::float8 AS balance_point`,
-        [userId, pointsAwarded],
+        `INSERT INTO user_shop_balances (user_id, shop_id, balance_point)
+         VALUES ($1, $2::uuid, $3)
+         ON CONFLICT (user_id, shop_id) DO UPDATE
+         SET balance_point = user_shop_balances.balance_point + EXCLUDED.balance_point,
+             updated_at = NOW()
+         RETURNING balance_point::float8 AS balance_point`,
+        [userId, shopId, pointsAwarded],
       );
 
       await client.query('COMMIT');

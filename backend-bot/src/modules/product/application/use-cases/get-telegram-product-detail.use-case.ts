@@ -1,7 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { filterPaymentMethodsForBank } from '../../../../integration/bank/bank-checkout';
+import { filterPaymentMethodsForShop } from '../../../../integration/bank/bank-checkout';
+import { BinancePayGateway } from '../../../../integration/binance/binance-pay.gateway';
 import { SepayGateway } from '../../../../integration/bank/sepay.gateway';
-import { SEPAY_GATEWAY } from '../../../../integration/bank/bank.tokens';
+import { ShopPaymentGatewaysService } from '../../../../integration/shop-payment/shop-payment-gateways.service';
 import { TelegramProductDetailEntity } from '../../domain/entities/product-detail.entity';
 import { ProductRepository } from '../../domain/repositories/product.repository';
 import { PRODUCT_REPOSITORY } from '../../product.tokens';
@@ -12,20 +13,27 @@ export class GetTelegramProductDetailUseCase {
   constructor(
     @Inject(PRODUCT_REPOSITORY)
     private readonly productRepository: ProductRepository,
-    @Inject(SEPAY_GATEWAY)
-    private readonly sepayGateway: SepayGateway,
+    private readonly shopGateways: ShopPaymentGatewaysService,
   ) {}
 
-  async execute(productId: number): Promise<TelegramProductDetailResponseDto | null> {
-    const entity = await this.productRepository.findTelegramProductDetailById(productId);
+  async execute(
+    shopId: string,
+    productId: number,
+  ): Promise<TelegramProductDetailResponseDto | null> {
+    const entity = await this.productRepository.findTelegramProductDetailById(shopId, productId);
     if (!entity) return null;
-    return mapProductDetailToDto(entity, this.sepayGateway);
+    const [sepay, binance] = await Promise.all([
+      this.shopGateways.getSepay(shopId),
+      this.shopGateways.getBinance(shopId),
+    ]);
+    return mapProductDetailToDto(entity, sepay, binance);
   }
 }
 
 function mapProductDetailToDto(
   entity: TelegramProductDetailEntity,
-  sepayGateway: SepayGateway,
+  sepay: SepayGateway | null,
+  binance: BinancePayGateway | null,
 ): TelegramProductDetailResponseDto {
   return {
     id: entity.id,
@@ -43,7 +51,7 @@ function mapProductDetailToDto(
       name_vi: v.nameVi,
       fulfillment_type: v.fulfillmentType,
       is_active: v.isActive,
-      payment_methods: filterPaymentMethodsForBank(v.paymentMethods, sepayGateway),
+      payment_methods: filterPaymentMethodsForShop(v.paymentMethods, { sepay, binance }),
       amount_vnd: v.amountVnd,
       amount_usdt: v.amountUsdt,
       stock_count: v.stockCount,

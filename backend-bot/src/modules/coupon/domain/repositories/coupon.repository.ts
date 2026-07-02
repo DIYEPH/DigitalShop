@@ -6,6 +6,7 @@ import { UserCouponWalletRow } from '../entities/user-coupon-wallet-row.entity';
 export type UserCouponListStatus = 'active' | 'used';
 
 export interface ListUserCouponsParams {
+  shopId: string;
   userId: number;
   status: UserCouponListStatus;
   variantId?: number;
@@ -14,11 +15,19 @@ export interface ListUserCouponsParams {
 export interface CouponRepository {
   findUserIdByTelegramId(telegramId: number): Promise<number | null>;
   listUserCoupons(params: ListUserCouponsParams): Promise<UserCouponWalletRow[]>;
-  listShopCoupons(): Promise<ShopCouponRow[]>;
-  findCouponByCode(code: string): Promise<CouponRow | null>;
-  findUserCouponById(userCouponId: number, userId: number): Promise<UserCouponWalletRow | null>;
-  findUnusedUserCouponByCode(userId: number, code: string): Promise<UserCouponWalletRow | null>;
-  redeemShopCoupon(userId: number, code: string): Promise<{ userCouponId: number }>;
+  listShopCoupons(shopId: string): Promise<ShopCouponRow[]>;
+  findCouponByCode(shopId: string, code: string): Promise<CouponRow | null>;
+  findUserCouponById(
+    shopId: string,
+    userCouponId: number,
+    userId: number,
+  ): Promise<UserCouponWalletRow | null>;
+  findUnusedUserCouponByCode(
+    shopId: string,
+    userId: number,
+    code: string,
+  ): Promise<UserCouponWalletRow | null>;
+  redeemShopCoupon(shopId: string, userId: number, code: string): Promise<{ userCouponId: number }>;
   consumeUserCoupon(
     client: PoolClient,
     userCouponId: number,

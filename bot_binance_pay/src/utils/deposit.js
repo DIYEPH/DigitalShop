@@ -1,7 +1,7 @@
 const config = require('../config');
 const { formatPrice } = require('./helpers');
 
-/** Thông báo khi không được nạp bank (lang / env). */
+/** Returns a block message when bank topup is unavailable (language / shop config). */
 function bankTopupBlockedMessage(t, langCode) {
   if (langCode !== 'vi') return t('bank_vi_only');
   if (!config.BANK_ENABLED) return t('bank_not_configured');
@@ -41,10 +41,6 @@ function buildTopupKeyboard(topupId, t) {
     [{ text: t('cancel'), callback_data: `topup_cancel_${topupId}` }],
     [{ text: t('back'), callback_data: 'deposit_menu' }],
   ];
-}
-
-function buildTopupBinanceKeyboard(topupId, t) {
-  return buildTopupKeyboard(topupId, t);
 }
 
 function formatBankTopupMessage(topup, t) {
@@ -114,7 +110,6 @@ module.exports = {
   bankTopupBlockedMessage,
   formatBinanceTopupMessage,
   formatBankTopupMessage,
-  buildTopupBinanceKeyboard,
   buildTopupKeyboard,
   presentTopupScreen,
   mapTopupError,

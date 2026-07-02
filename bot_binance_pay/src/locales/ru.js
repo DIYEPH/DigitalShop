@@ -8,14 +8,12 @@ module.exports = {
   back: '◀️ Назад',
   cancel: '❌ Отмена',
   error: '💣 Система сейчас недоступна💥 Пожалуйста, попробуйте снова‼️',
-  not_enough: 'Недостаточно',
   from_price: 'от',
 
   // Main menu
   shop_name: '🚚 {name}',
   welcome: '✨ Привет, {name}!',
   select_product: '🛒 Выберите товар для покупки:',
-  select_category: '🔖 Выберите категорию, чтобы посмотреть товары',
   no_products: '⛄ Товары отсутствуют!',
   profile_btn: '👤 Профиль',
   history_btn: '📋 История',
@@ -25,9 +23,7 @@ module.exports = {
   contact_admin: '💬 Связаться с админом',
 
   // Products
-  product_price: '💰 Цена: {price}/шт',
   product_stock: '📊 В наличии: {count} шт',
-  description: 'Описание',
   select_quantity: '⛄ Выберите количество:',
   enter_quantity: '✏️ Введите количество для покупки:',
   invalid_quantity: '✖️ Неверное количество! Введите число > 0',
@@ -40,15 +36,10 @@ module.exports = {
 
   // Payment
   payment_title: '💳 ВЫБЕРИТЕ СПОСОБ ОПЛАТЫ',
-  your_balance: 'Ваш баланс:',
   balance_label: '• Balance: {amount}',
   credits_label: '• Point: {amount}',
   select_payment: '⛄ Выберите способ оплаты:',
-  pay_with_credits: '🎁 Использовать Point ({amount})',
-  pay_with_balance: 'Использовать баланс ({amount})',
-  pay_with_both: '🔄 Кредиты + баланс',
   pay_binance: '💰 Binance Pay (USDT)',
-  pay_balance_method: '💵 Списать баланс (USDT)',
   pay_balance_usdt: '💵 Оплата балансом USDT',
   pay_balance_vnd: '💵 Оплата балансом VNĐ',
   pay_crypto: '🔑 Crypto кошелёк',
@@ -78,9 +69,29 @@ module.exports = {
   clear_coupon: '✖️ Убрать промокод',
   coupon_prompt: 'Введите промокод',
   coupon_applied_line: 'Промокод: {code}',
+  coupon_not_owned: 'Этот купон вам не принадлежит.',
+  coupon_already_used: 'Этот купон уже использован.',
   insufficient_balance_point: 'Недостаточно point для обмена.',
+  coupon_not_for_sale: 'Этого купона нет в магазине.',
+  pick_my_coupon: '🎟️ Мои купоны',
   main_my_coupons_btn: '🎟️ Мои купоны',
   main_coupon_shop_btn: '🛒 Магазин купонов',
+  my_coupons_hub_title: 'МОИ КУПОНЫ',
+  my_coupons_hub_hint: 'Выберите список:',
+  my_coupons_tab_active: '✅ Активные',
+  my_coupons_tab_used: '📋 Использованные',
+  my_coupons_title_active: 'АКТИВНЫЕ КУПОНЫ',
+  my_coupons_title_used: 'ИСПОЛЬЗОВАННЫЕ КУПОНЫ',
+  my_coupons_back_hub: '◀️ Типы купонов',
+  my_coupons_empty: 'В этом разделе купонов нет.',
+  my_coupons_tap_select: '👆 Выберите купон, чтобы применить при оплате.',
+  coupon_discount_percent: 'Скидка {percent}%',
+  coupon_expires: 'Действует до: {date}',
+  coupon_cannot_inactive: 'Купон неактивен',
+  coupon_cannot_not_started: 'Ещё не начался',
+  coupon_cannot_expired: 'Истёк',
+  coupon_cannot_wrong_variant: 'Не подходит для этого тарифа',
+  coupon_cannot_limit_exceeded: 'Лимит использования исчерпан',
   coupon_shop_title: 'МАГАЗИН КУПОНОВ',
   coupon_shop_empty: 'Нет купонов за point.',
   coupon_shop_cost: 'Цена: {point} point',
@@ -98,7 +109,6 @@ module.exports = {
   order_expires: 'Истекает через ~{minutes} мин',
   order_pending_binance_hint: '⏳ Далее: оплата Binance/Crypto (скоро).',
   order_pending_bank_hint: '⏳ Переведите точную сумму с кодом оплаты в назначении.',
-  order_pending_balance_hint: '⏳ Далее: оплата с баланса (скоро).',
   check_payment: '🔄 Проверить оплату',
   cancel_order: '❌ Отменить заказ',
   order_binance_pay_title: 'ОПЛАТА BINANCE PAY',
@@ -125,7 +135,6 @@ module.exports = {
   payment_warning: '⚠️ ОБЯЗАТЕЛЬНО укажите верное примечание для авто-подтверждения!',
 
   // Payment result
-  payment_success: '✅ ОПЛАТА УСПЕШНА!',
   payment_pending: '❄️ Оплата еще не получена! Попробуйте позже.',
 
   // Accounts delivery
@@ -147,9 +156,6 @@ module.exports = {
 
   // Balance
   balance_title: '💰 ВАШ БАЛАНС',
-  current_balance: 'Balance: {amount}',
-  current_credits: '🎁 Point: {amount}',
-  total_balance: '📊 Итого: {amount}',
   total_assets_title: '💰 Общие активы:',
 
   // Topup Binance (backend)
@@ -163,7 +169,6 @@ module.exports = {
 
   // Deposit
   deposit_title: 'ПОПОЛНЕНИЕ',
-  deposit_current: 'Текущий баланс: {amount}',
   select_deposit_method: '⛄ Выберите способ пополнения:',
   deposit_binance: 'Binance Pay (USDT)',
   deposit_bank: '🏦 Банковский перевод',
@@ -173,14 +178,7 @@ module.exports = {
   enter_amount: '📝 Введите сумму для пополнения:',
   invalid_amount: '✖️ Неверная сумма!',
   min_amount: '✖️ Минимальная сумма {amount}!',
-  deposit_success: '✅ ПОПОЛНЕНИЕ УСПЕШНО!\n\n💰 Начислено {amount} на ваш счет!',
-  deposit_success_with_bonus: '✅ Пополнение успешно!\n\n💰 Начислено {amount} {currency} на ваш счет!\n\n🎁 БОНУС:',
-  deposit_bonus_item: '• {eventName}: +{amount} point',
   deposit_not_found: '✖️ Запрос на пополнение не найден!',
-  expires_30_min: '⏳ Истекает через {minutes} минут',
-
-  // Admin notifications
-  admin_new_deposit: '💰 НОВОЕ ПОПОЛНЕНИЕ\n👤 User: {userId}\n{amount} {currency}\n📱 {method}',
 
   // Credits / Referral
   credits_title: 'POINT',
@@ -212,7 +210,6 @@ module.exports = {
   referral_rewards: '🎯 НАГРАДЫ',
   referrer_bonus: '• Пригласивший получает: +{amount} point',
   referee_bonus: '• Новый пользователь получает: +{amount} point',
-  min_deposit_bonus: '(При пополнении от {amount})',
   copy_link_btn: '📋 Копировать ссылку',
 
   my_referral_title: '🔗 ВАШ РЕФЕРАЛЬНЫЙ КОД',
@@ -223,12 +220,9 @@ module.exports = {
   referrals_list_title: '👥 ВАШИ ПРИГЛАШЕННЫЕ',
   no_referrals: '⛄ Еще нет приглашенных!\n\nПоделитесь кодом, чтобы получать point!',
   referrals_total: '📊 Всего: {count} чел',
-  referral_spent: '{name} - Потрачено: {amount}',
-  and_more: '\n... и еще {count}',
 
   enter_referral_title: '📝 ВВЕДИТЕ РЕФЕРАЛЬНЫЙ КОД',
   enter_code_prompt: '✏️ Введите реферальный код друга:',
-  already_has_referrer: '❌ У вас уже есть пригласивший!',
   invalid_referral: '❌ Неверный реферальный код!',
   referral_already_bound: 'ℹ️ Вы уже вводили реферальный код.',
   referral_self: '❌ Нельзя использовать свой реферальный код.',
@@ -247,40 +241,19 @@ module.exports = {
   history_title_cancelled: 'ОТМЕНЁННЫЕ ЗАКАЗЫ',
   history_back_hub: '◀️ Типы заказов',
   no_history_in_group: 'В этом разделе заказов нет.',
-  history_no_pending_orders: 'Нет заказов, ожидающих оплаты.',
   no_history: '📋 История покупок отсутствует!',
   order_payment_method: 'Оплата',
   history_page_info: 'Стр. {page}/{total}',
   history_tap_detail: '👆 Нажмите заказ ниже для деталей',
   history_order_detail_title: 'ДЕТАЛИ ЗАКАЗА',
-  history_back_list: '◀️ Список заказов',
   order_status_icons: {
     completed: '✅',
     pending: '⏳',
     paid: '💳',
-    expired: '⌛',
     cancelled: '❌',
   },
 
   // Language selection
   language_title: '🌐 ВЫБЕРИТЕ ЯЗЫК',
   language_changed: '✅ Язык обновлён!',
-  language_saved_local: '✅ Сохранено в боте. Нет связи с сервером — повтор при /start.',
-
-  // Broadcast
-  broadcast_prefix: '📣 Объявление:',
-
-  // Admin commands
-  admin_user_not_found: '❌ Пользователь не найден!',
-  admin_balance_added: '✅ Добавлено {amount} пользователю {name} ({id})',
-  admin_balance_added_notify: '🎁 Админ добавил {amount} на ваш счет!',
-  admin_credits_added: '✅ Добавлено {amount} point пользователю {name} ({id})',
-  admin_credits_added_notify: '🎁 Админ добавил {amount} point на ваш счет!',
-  admin_clearing_messages: '⏳ Очистка сообщений...',
-  admin_messages_cleared: '🎯 Удалено {count} сообщений!',
-  admin_event_type_error: '❌ Тип должен быть: promo, welcome, deposit, purchase',
-  admin_event_created: '✅ Событие создано #{id}\n\n📋 {name}\n🎯 +{amount} point\n{code}',
-  admin_event_error: '❌ Ошибка создания события: {error}',
-  admin_no_orders: '📦 ЗАКАЗЫ\n━━━━━━━━━━━━━━━━━━━━━\n\n⛄ Заказов пока нет!',
-  admin_broadcasting: '⏳ Рассылка для {count} пользователей...'
 };

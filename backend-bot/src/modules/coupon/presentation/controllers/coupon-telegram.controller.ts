@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { BotShopId } from '../../../auth/presentation/decorators/bot-shop.decorator';
 import { BotSecretGuard } from '../../../auth/presentation/guards/bot-secret.guard';
 import {
   TelegramCouponMineQueryDto,
@@ -18,20 +19,20 @@ export class CouponTelegramController {
   ) {}
 
   @Get('mine')
-  async mine(@Query() query: TelegramCouponMineQueryDto) {
-    const data = await this.listMineUseCase.execute(query);
+  async mine(@BotShopId() shopId: string, @Query() query: TelegramCouponMineQueryDto) {
+    const data = await this.listMineUseCase.execute(shopId, query);
     return { data };
   }
 
   @Get('shop')
-  async shop() {
-    const data = await this.listShopUseCase.execute();
+  async shop(@BotShopId() shopId: string) {
+    const data = await this.listShopUseCase.execute(shopId);
     return { data };
   }
 
   @Post('redeem')
-  async redeem(@Body() body: TelegramCouponRedeemDto) {
-    const data = await this.redeemUseCase.execute(body);
+  async redeem(@BotShopId() shopId: string, @Body() body: TelegramCouponRedeemDto) {
+    const data = await this.redeemUseCase.execute(shopId, body);
     return { data };
   }
 }

@@ -14,14 +14,19 @@ export class ClaimTelegramDailyLoginUseCase {
     private readonly config: ConfigService,
   ) {}
 
-  async execute(telegramId: number): Promise<TelegramDailyLoginClaimResponseDto> {
+  async execute(shopId: string, telegramId: number): Promise<TelegramDailyLoginClaimResponseDto> {
     const userId = await this.pointRepository.findUserIdByTelegramId(telegramId);
     if (!userId) {
       throw new ApiException('user_not_found', 'Telegram user is not linked yet.', 404);
     }
 
     const { claimDate, pointsReward } = resolveDailyLoginContext(this.config);
-    const claimed = await this.pointRepository.claimDailyLogin(userId, claimDate, pointsReward);
+    const claimed = await this.pointRepository.claimDailyLogin(
+      shopId,
+      userId,
+      claimDate,
+      pointsReward,
+    );
     if (!claimed) {
       throw new ApiException(
         'daily_already_claimed',

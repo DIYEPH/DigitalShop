@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Pool } from 'pg';
 import { generateReferralCode } from '../../../../../shared/referral-code';
+import {
+  assertShopCustomerNotBanned,
+  upsertShopCustomer,
+} from '../../../../../shared/infrastructure/shop-customer';
 import { AuthUserEntity } from '../../../domain/entities/auth-user.entity';
 import { AuthUserRepository } from '../../../domain/repositories/auth-user.repository';
 
@@ -14,7 +18,10 @@ export class PgAuthUserRepository implements AuthUserRepository {
     });
   }
 
-  async findTelegramMeById(telegramId: number): Promise<{
+  async findTelegramMeById(
+    shopId: string,
+    telegramId: number,
+  ): Promise<{
     id: number;
     telegramId: number;
     username: string | null;
@@ -33,10 +40,12 @@ export class PgAuthUserRepository implements AuthUserRepository {
           U.TELEGRAM_ID,
           U.USERNAME,
           U.FULL_NAME,
-          U.BALANCE_VND,
-          U.BALANCE_USDT,
-          U.BALANCE_POINT
+          COALESCE(B.BALANCE_VND, 0) AS BALANCE_VND,
+          COALESCE(B.BALANCE_USDT, 0) AS BALANCE_USDT,
+          COALESCE(B.BALANCE_POINT, 0) AS BALANCE_POINT
         FROM USERS U
+        LEFT JOIN USER_SHOP_BALANCES B
+          ON B.USER_ID = U.ID AND B.SHOP_ID = $2::uuid
         WHERE U.TELEGRAM_ID = $1
         LIMIT 1
       ),
@@ -54,6 +63,7 @@ export class PgAuthUserRepository implements AuthUserRepository {
           ) AS BALANCE_SPENT_USDT
         FROM ORDERS O
         WHERE O.USER_ID = (SELECT ID FROM TARGET_USER)
+          AND O.SHOP_ID = $2::uuid
         GROUP BY O.USER_ID
       ),
       POINT_STATS AS (
@@ -65,6 +75,7 @@ export class PgAuthUserRepository implements AuthUserRepository {
           )::INT AS CREDITS_SPENT_COIN
         FROM POINT_TRANSACTIONS PT
         WHERE PT.USER_ID = (SELECT ID FROM TARGET_USER)
+          AND PT.SHOP_ID = $2::uuid
         GROUP BY PT.USER_ID
       )
       SELECT
@@ -81,7 +92,7 @@ export class PgAuthUserRepository implements AuthUserRepository {
       FROM TARGET_USER TU
       LEFT JOIN ORDER_STATS OS ON OS.USER_ID = TU.ID
       LEFT JOIN POINT_STATS PS ON PS.USER_ID = TU.ID`,
-      [telegramId],
+      [telegramId, shopId],
     );
 
     if (!result.rows.length) return null;
@@ -100,11 +111,14 @@ export class PgAuthUserRepository implements AuthUserRepository {
     };
   }
 
-  async getOrCreateByTelegramIdentity(input: {
-    telegramId: number;
-    username?: string;
-    fullName?: string;
-  }): Promise<AuthUserEntity> {
+  async getOrCreateByTelegramIdentity(
+    shopId: string,
+    input: {
+      telegramId: number;
+      username?: string;
+      fullName?: string;
+    },
+  ): Promise<AuthUserEntity> {
     const tgId = input.telegramId;
     const username = input.username?.trim() || null;
     const fullName = input.fullName?.trim() || null;
@@ -138,7 +152,12 @@ export class PgAuthUserRepository implements AuthUserRepository {
       [tgId, username, fullName, topupCode, referralCode],
     );
 
-    return this.mapRow(upserted.rows[0]);
+    const user = this.mapRow(upserted.rows[0]);
+
+    await assertShopCustomerNotBanned(this.pool, shopId, user.id);
+    await upsertShopCustomer(this.pool, shopId, user.id);
+
+    return user;
   }
 
   async updateLanguageByTelegramId(

@@ -1,6 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { BinancePayGateway } from '../../../../integration/binance/binance-pay.gateway';
-import { BINANCE_PAY_GATEWAY } from '../../../../integration/binance/binance.tokens';
+import { ShopPaymentGatewaysService } from '../../../../integration/shop-payment/shop-payment-gateways.service';
 import { TOPUP_REPOSITORY } from '../../wallet.tokens';
 import { TopupEntity } from '../../domain/entities/topup.entity';
 import { TopupRepository } from '../../domain/repositories/topup.repository';
@@ -10,16 +9,17 @@ export class ProcessBinanceTelegramTopupUseCase {
   constructor(
     @Inject(TOPUP_REPOSITORY)
     private readonly topupRepository: TopupRepository,
-    @Inject(BINANCE_PAY_GATEWAY)
-    private readonly binanceGateway: BinancePayGateway,
+    private readonly shopGateways: ShopPaymentGatewaysService,
   ) {}
 
   async execute(topup: TopupEntity): Promise<boolean> {
-    if (!this.binanceGateway.isEnabled()) return false;
     if (topup.status !== 'PENDING' || topup.provider !== 'BINANCE') return false;
 
-    const transactions = await this.binanceGateway.getTransactionHistory();
-    const matched = this.binanceGateway.findMatchingPayment(
+    const binanceGateway = await this.shopGateways.getBinance(topup.shopId);
+    if (!binanceGateway) return false;
+
+    const transactions = await binanceGateway.getTransactionHistory();
+    const matched = binanceGateway.findMatchingPayment(
       transactions,
       topup.paymentCode,
       topup.amount,
@@ -28,7 +28,7 @@ export class ProcessBinanceTelegramTopupUseCase {
     );
     if (!matched) return false;
 
-    const txId = this.binanceGateway.getExternalTxId(matched);
+    const txId = binanceGateway.getExternalTxId(matched);
     if (!txId) return false;
 
     return this.topupRepository.confirmBinanceTopupAndCreditBalance(topup.id, txId);

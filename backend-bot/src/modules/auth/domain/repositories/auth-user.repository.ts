@@ -1,7 +1,10 @@
 import { AuthUserEntity } from '../entities/auth-user.entity';
 
 export interface AuthUserRepository {
-  findTelegramMeById(telegramId: number): Promise<{
+  findTelegramMeById(
+    shopId: string,
+    telegramId: number,
+  ): Promise<{
     id: number;
     telegramId: number;
     username: string | null;
@@ -13,11 +16,14 @@ export interface AuthUserRepository {
     balanceSpentUsdt: number;
     creditsSpentCoin: number;
   } | null>;
-  getOrCreateByTelegramIdentity(input: {
-    telegramId: number;
-    username?: string;
-    fullName?: string;
-  }): Promise<AuthUserEntity>;
+  getOrCreateByTelegramIdentity(
+    shopId: string,
+    input: {
+      telegramId: number;
+      username?: string;
+      fullName?: string;
+    },
+  ): Promise<AuthUserEntity>;
   updateLanguageByTelegramId(
     telegramId: number,
     language: 'en' | 'vi' | 'ru' | 'zh',

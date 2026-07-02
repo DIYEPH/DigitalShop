@@ -1,4 +1,4 @@
-// i18n service — chỉ cache ngôn ngữ + dịch chuỗi + catalog locale (không build Telegram keyboard).
+// i18n service: per-user language cache + string translation + locale catalog.
 const en = require('./en');
 const ru = require('./ru');
 const zh = require('./zh');
@@ -16,14 +16,6 @@ function setUserLang(userId, langCode) {
 
 function getUserLang(userId) {
   return userLangs.get(userId) || defaultLang;
-}
-
-function loadUserLangs(users) {
-  users.forEach((u) => {
-    if (u.language && languages[u.language]) {
-      userLangs.set(u.id, u.language);
-    }
-  });
 }
 
 function listLocalesForPicker() {
@@ -59,7 +51,6 @@ function getTranslator(userId) {
 module.exports = {
   setUserLang,
   getUserLang,
-  loadUserLangs,
   listLocalesForPicker,
   getTranslator,
 };

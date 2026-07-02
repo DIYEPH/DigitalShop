@@ -13,6 +13,7 @@ export class ListTelegramCouponMineUseCase {
   ) {}
 
   async execute(
+    shopId: string,
     query: TelegramCouponMineQueryDto,
   ): Promise<{ status: 'active' | 'used'; items: CouponWalletItemDto[] }> {
     const userId = await this.couponRepository.findUserIdByTelegramId(Number(query.telegram_id));
@@ -22,6 +23,7 @@ export class ListTelegramCouponMineUseCase {
 
     const status = query.status === 'used' ? 'used' : 'active';
     const rows = await this.couponRepository.listUserCoupons({
+      shopId,
       userId,
       status,
       variantId: query.variant_id,

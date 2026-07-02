@@ -15,13 +15,16 @@ export class GetPendingTelegramOrderUseCase {
     private readonly orderRepository: OrderRepository,
   ) {}
 
-  async execute(input: TelegramOrderPendingQueryDto): Promise<TelegramOrderPendingResponseDto | null> {
+  async execute(
+    shopId: string,
+    input: TelegramOrderPendingQueryDto,
+  ): Promise<TelegramOrderPendingResponseDto | null> {
     const userId = await this.orderRepository.findUserIdByTelegramId(Number(input.telegram_id));
     if (!userId) {
       throw new ApiException('user_not_found', 'Telegram user is not linked yet.', 404);
     }
 
-    const pending = await this.orderRepository.findActivePendingOrder(userId);
+    const pending = await this.orderRepository.findActivePendingOrder(shopId, userId);
     if (!pending) return null;
 
     const expiry = buildOrderExpiry(pending.createdAt, pending.paymentMethod);

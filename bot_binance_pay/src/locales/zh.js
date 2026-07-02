@@ -8,14 +8,12 @@ module.exports = {
   back: '◀️ 返回',
   cancel: '❌ 取消',
   error: '💣 系统当前不可用💥 请稍后再试‼️',
-  not_enough: '不足',
   from_price: '最低',
 
   // Main menu
   shop_name: '🚚 {name}',
   welcome: '✨ 你好，{name}！',
   select_product: '🛒 选择要购买的产品：',
-  select_category: '🔖 选择分类查看产品',
   no_products: '⛄ 暂无产品！',
   profile_btn: '👤 个人中心',
   history_btn: '📋 历史记录',
@@ -25,8 +23,8 @@ module.exports = {
   contact_admin: '💬 联系客服',
 
   // Products
-  product_price: '💰 价格：{price}/个',
-  product_stock: '📊 库存：{count} 个',  description: '描述',  select_quantity: '⛄ 选择数量：',
+  product_stock: '📊 库存：{count} 个',
+  select_quantity: '⛄ 选择数量：',
   enter_quantity: '✏️ 输入购买数量：',
   invalid_quantity: '✖️ 数量无效！请输入大于0的数字',
   not_enough_stock: '✖️ 库存不足！仅剩 {count} 个。',
@@ -38,15 +36,10 @@ module.exports = {
 
   // Payment
   payment_title: '💳 选择支付方式',
-  your_balance: '您的余额：',
   balance_label: '• 余额：{amount}',
   credits_label: '• Point：{amount}',
   select_payment: '⛄ 选择支付方式：',
-  pay_with_credits: '🎁 使用 Point ({amount})',
-  pay_with_balance: '使用余额 ({amount})',
-  pay_with_both: '🔄 Point + 余额',
   pay_binance: '💰 币安支付 (USDT)',
-  pay_balance_method: '💵 扣除余额 (USDT)',
   pay_balance_usdt: '💵 USDT 余额支付',
   pay_balance_vnd: '💵 VNĐ 余额支付',
   pay_crypto: '🔑 加密钱包',
@@ -76,9 +69,29 @@ module.exports = {
   clear_coupon: '✖️ 清除优惠码',
   coupon_prompt: '请输入优惠码',
   coupon_applied_line: '优惠码：{code}',
+  coupon_not_owned: '您不拥有此优惠码。',
+  coupon_already_used: '此优惠码已被使用。',
   insufficient_balance_point: 'Point 不足，无法兑换。',
+  coupon_not_for_sale: '此优惠码不在商店中。',
+  pick_my_coupon: '🎟️ 我的优惠码',
   main_my_coupons_btn: '🎟️ 我的优惠码',
   main_coupon_shop_btn: '🛒 优惠码商店',
+  my_coupons_hub_title: '我的优惠码',
+  my_coupons_hub_hint: '请选择要查看的列表：',
+  my_coupons_tab_active: '✅ 可用',
+  my_coupons_tab_used: '📋 已使用',
+  my_coupons_title_active: '可用优惠码',
+  my_coupons_title_used: '已使用优惠码',
+  my_coupons_back_hub: '◀️ 优惠码类型',
+  my_coupons_empty: '此分类暂无优惠码。',
+  my_coupons_tap_select: '👆 选择优惠码可在结账时使用。',
+  coupon_discount_percent: '{percent}% 折扣',
+  coupon_expires: '有效期至：{date}',
+  coupon_cannot_inactive: '优惠码未启用',
+  coupon_cannot_not_started: '尚未开始',
+  coupon_cannot_expired: '已过期',
+  coupon_cannot_wrong_variant: '不适用于此套餐',
+  coupon_cannot_limit_exceeded: '已达使用上限',
   coupon_shop_title: '优惠码商店',
   coupon_shop_empty: '暂无可用 point 兑换的优惠码。',
   coupon_shop_cost: '价格：{point} point',
@@ -96,7 +109,6 @@ module.exports = {
   order_expires: '约 {minutes} 分钟后过期',
   order_pending_binance_hint: '⏳ 下一步：Binance/Crypto 支付（开发中）。',
   order_pending_bank_hint: '⏳ 请转账准确金额，备注填写支付码。',
-  order_pending_balance_hint: '⏳ 下一步：余额支付（开发中）。',
   check_payment: '🔄 检查支付',
   cancel_order: '❌ 取消订单',
   order_binance_pay_title: 'BINANCE PAY 付款',
@@ -123,7 +135,6 @@ module.exports = {
   payment_warning: '⚠️ 必须填写正确备注才能自动确认！',
 
   // Payment result
-  payment_success: '✅ 支付成功！',
   payment_pending: '❄️ 暂未收到付款！请稍后重试。',
 
   // Accounts delivery
@@ -145,9 +156,6 @@ module.exports = {
 
   // Balance
   balance_title: '💰 我的余额',
-  current_balance: '余额：{amount}',
-  current_credits: '🎁 Point：{amount}',
-  total_balance: '📊 总计：{amount}',
   total_assets_title: '💰 总资产：',
 
   // Topup Binance (backend)
@@ -161,7 +169,6 @@ module.exports = {
 
   // Deposit
   deposit_title: '充值',
-  deposit_current: '当前余额：{amount}',
   select_deposit_method: '⛄ 选择充值方式：',
   deposit_binance: '币安支付 (USDT)',
   deposit_bank: '🏦 银行转账',
@@ -171,14 +178,7 @@ module.exports = {
   enter_amount: '📝 输入充值金额：',
   invalid_amount: '✖️ 金额无效！',
   min_amount: '✖️ 最低金额为 {amount}！',
-  deposit_success: '✅ 充值成功！\n\n💰 已添加 {amount} 到您的账户！',
-  deposit_success_with_bonus: '✅ 充值成功！\n\n💰 已添加 {amount} {currency} 到您的账户！\n\n🎁 奖励：',
-  deposit_bonus_item: '• {eventName}: +{amount} point',
   deposit_not_found: '✖️ 未找到充值请求！',
-  expires_30_min: '⏳ {minutes}分钟后过期',
-
-  // Admin notifications
-  admin_new_deposit: '💰 新充值\n👤 用户：{userId}\n{amount} {currency}\n📱 {method}',
 
   // Credits / Referral
   credits_title: 'POINT',
@@ -210,7 +210,6 @@ module.exports = {
   referral_rewards: '🎯 奖励',
   referrer_bonus: '• 邀请人获得：+{amount} point',
   referee_bonus: '• 新用户获得：+{amount} point',
-  min_deposit_bonus: '（首次充值满 {amount}）',
   copy_link_btn: '📋 复制链接',
 
   my_referral_title: '🔗 我的邀请码',
@@ -221,12 +220,9 @@ module.exports = {
   referrals_list_title: '👥 我的邀请',
   no_referrals: '⛄ 还没有邀请任何人！\n\n分享邀请码获取 point！',
   referrals_total: '📊 共计：{count} 人',
-  referral_spent: '{name} - 消费：{amount}',
-  and_more: '\n... 还有 {count} 人',
 
   enter_referral_title: '📝 输入邀请码',
   enter_code_prompt: '✏️ 请输入好友的邀请码：',
-  already_has_referrer: '❌ 您已有邀请人！',
   invalid_referral: '❌ 邀请码无效！',
   referral_already_bound: 'ℹ️ 您已输入过邀请码。',
   referral_self: '❌ 不能使用自己的邀请码。',
@@ -245,40 +241,19 @@ module.exports = {
   history_title_cancelled: '已取消订单',
   history_back_hub: '◀️ 订单类型',
   no_history_in_group: '此分类暂无订单。',
-  history_no_pending_orders: '您没有待付款订单。',
   no_history: '📋 暂无购买记录！',
   order_payment_method: '支付方式',
   history_page_info: '第 {page}/{total} 页',
   history_tap_detail: '👆 点击下方订单查看详情',
   history_order_detail_title: '订单详情',
-  history_back_list: '◀️ 订单列表',
   order_status_icons: {
     completed: '✅',
     pending: '⏳',
     paid: '💳',
-    expired: '⌛',
     cancelled: '❌',
   },
 
   // Language selection
   language_title: '🌐 选择语言',
   language_changed: '✅ 语言已更新！',
-  language_saved_local: '✅ 已在机器人端保存。同步服务器失败 — 下次 /start 重试。',
-
-  // Broadcast
-  broadcast_prefix: '📣 公告：',
-
-  // Admin commands
-  admin_user_not_found: '❌ 用户不存在！',
-  admin_balance_added: '✅ 已为用户 {name} ({id}) 添加 {amount}',
-  admin_balance_added_notify: '🎁 管理员已向您的账户添加 {amount}！',
-  admin_credits_added: '✅ 已为用户 {name} ({id}) 添加 {amount} point',
-  admin_credits_added_notify: '🎁 管理员已向您的账户添加 {amount} point！',
-  admin_clearing_messages: '⏳ 正在清除消息...',
-  admin_messages_cleared: '🎯 已清除 {count} 条消息！',
-  admin_event_type_error: '❌ 类型必须是：promo, welcome, deposit, purchase',
-  admin_event_created: '✅ 已创建活动 #{id}\n\n📋 {name}\n🎯 +{amount} point\n{code}',
-  admin_event_error: '❌ 创建活动错误：{error}',
-  admin_no_orders: '📦 订单\n━━━━━━━━━━━━━━━━━━━━━\n\n⛄ 暂无订单！',
-  admin_broadcasting: '⏳ 正在向 {count} 个用户发送广播...'
 };

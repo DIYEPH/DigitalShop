@@ -10,13 +10,13 @@ export class CancelTopupUseCase {
     private readonly topupRepository: TopupRepository,
   ) {}
 
-  async execute(topupId: number, telegramId: number): Promise<void> {
+  async execute(shopId: string, topupId: number, telegramId: number): Promise<void> {
     const userId = await this.topupRepository.findUserIdByTelegramId(telegramId);
     if (!userId) {
       throw new ApiException('user_not_found', 'Telegram user is not linked yet.', 404);
     }
 
-    const cancelled = await this.topupRepository.cancelTopup(topupId, userId);
+    const cancelled = await this.topupRepository.cancelTopup(shopId, topupId, userId);
     if (!cancelled) {
       throw new ApiException('topup_not_cancellable', 'Topup not found or already completed.', 404);
     }

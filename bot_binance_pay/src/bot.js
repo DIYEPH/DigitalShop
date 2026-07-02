@@ -8,11 +8,11 @@ const messageHandlers = require('./handlers/messages');
 
 async function startBot() {
   if (!isBackendEnabled()) {
-    console.error('❌ Cần BACKEND_API_BASE_URL và BACKEND_BOT_SECRET trong .env');
+    console.error('BACKEND_API_BASE_URL and BACKEND_BOT_SECRET are required');
     process.exit(1);
   }
 
-  console.log('🚀 Starting bot (NestJS backend only)...');
+  console.log('Starting bot...');
 
   const bot = new Telegraf(config.BOT_TOKEN);
 
@@ -35,8 +35,7 @@ async function startBot() {
   bot.launch().catch((err) => console.error('Launch error:', err.message));
 
   await waitForBotInfo(bot);
-  console.log(`🤖 Bot: @${bot.botInfo.username}`);
-  console.log(`🏪 ${config.SHOP_NAME} is running!`);
+  console.log(`Bot @${bot.botInfo?.username || 'unknown'} for "${config.SHOP_NAME}" is running`);
 
   registerCommands(bot).catch(() => {});
 
@@ -56,6 +55,7 @@ async function registerCommands(bot) {
   await bot.telegram.setMyCommands([
     { command: 'start', description: 'Start / 开始 / Bắt đầu' },
     { command: 'balance', description: 'Balance / 余额 / Số dư' },
+    { command: 'daily', description: 'Daily check-in / 签到 / Điểm danh' },
     { command: 'referral', description: 'Referral / 邀请 / Giới thiệu' },
     { command: 'history', description: 'History / 历史 / Lịch sử' },
     { command: 'lang', description: 'Language / 语言 / Ngôn ngữ' },

@@ -1,6 +1,6 @@
 const config = require('../config');
 const BackendProduct = require('../services/backend-product');
-const { getFullName, getAdminUsername, formatPrice, formatPoint } = require('./helpers');
+const { getFullName, getSupportUrl, formatPrice, formatPoint } = require('./helpers');
 const { buildShopKeyboard } = require('./keyboard');
 
 async function buildMainMenuPayload(user, t, options = {}) {
@@ -10,7 +10,7 @@ async function buildMainMenuPayload(user, t, options = {}) {
   const result = await BackendProduct.listProductsForBot(null);
   const products = result?.data?.items ?? [];
 
-  const keyboard = buildShopKeyboard(products, t, getAdminUsername(), langCode);
+  const keyboard = buildShopKeyboard(products, t, getSupportUrl(), langCode);
 
   const headerLines = includeWelcome
     ? [

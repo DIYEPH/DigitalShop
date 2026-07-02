@@ -14,9 +14,10 @@ export class GetTelegramDailyLoginStatusUseCase {
     private readonly config: ConfigService,
   ) {}
 
-  async execute(telegramId: number): Promise<TelegramDailyLoginStatusDto> {
+  async execute(shopId: string, telegramId: number): Promise<TelegramDailyLoginStatusDto> {
     const { timezone, claimDate, pointsReward } = resolveDailyLoginContext(this.config);
     const status = await this.pointRepository.getDailyLoginStatusByTelegramId(
+      shopId,
       telegramId,
       claimDate,
       timezone,

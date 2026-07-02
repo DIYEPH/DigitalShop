@@ -1,4 +1,5 @@
 import { Body, Controller, Get, ParseIntPipe, Post, Query, UseGuards } from '@nestjs/common';
+import { BotShopId } from '../../../auth/presentation/decorators/bot-shop.decorator';
 import { BotSecretGuard } from '../../../auth/presentation/guards/bot-secret.guard';
 import { TelegramReferralBindDto } from '../../application/dto/telegram-referral.dto';
 import { BindTelegramReferralUseCase } from '../../application/use-cases/bind-telegram-referral.use-case';
@@ -13,14 +14,17 @@ export class ReferralTelegramController {
   ) {}
 
   @Get('me')
-  async getMe(@Query('telegram_id', ParseIntPipe) telegramId: number) {
-    const data = await this.getReferralMeUseCase.execute(telegramId);
+  async getMe(
+    @BotShopId() shopId: string,
+    @Query('telegram_id', ParseIntPipe) telegramId: number,
+  ) {
+    const data = await this.getReferralMeUseCase.execute(shopId, telegramId);
     return { data };
   }
 
   @Post('bind')
-  async bind(@Body() body: TelegramReferralBindDto) {
-    const data = await this.bindReferralUseCase.execute(body);
+  async bind(@BotShopId() shopId: string, @Body() body: TelegramReferralBindDto) {
+    const data = await this.bindReferralUseCase.execute(shopId, body);
     return { data };
   }
 }

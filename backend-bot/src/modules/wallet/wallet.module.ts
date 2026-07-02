@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
-import { BankIntegrationModule } from '../../integration/bank/bank.module';
-import { BinanceIntegrationModule } from '../../integration/binance/binance.module';
+import { ShopPaymentModule } from '../../integration/shop-payment/shop-payment.module';
 import { BotSecretGuard } from '../auth/presentation/guards/bot-secret.guard';
 import { CancelTopupUseCase } from './application/use-cases/cancel-topup.use-case';
 import { CreateBankTelegramTopupUseCase } from './application/use-cases/create-bank-topup.use-case';
@@ -14,7 +13,7 @@ import { WalletTelegramController } from './presentation/controllers/wallet-tele
 import { TOPUP_REPOSITORY } from './wallet.tokens';
 
 @Module({
-  imports: [BankIntegrationModule, BinanceIntegrationModule],
+  imports: [ShopPaymentModule],
   controllers: [WalletTelegramController],
   providers: [
     CreateBinanceTelegramTopupUseCase,

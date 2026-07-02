@@ -99,6 +99,7 @@ function register(bot) {
       '━━━━━━━━━━━━━━━━━━━━━',
       '',
       formatPrice(wallet.balance),
+      formatPrice(wallet.balanceVnd, 'VNĐ'),
       formatPoint(wallet.balancePoint),
       '',
       `📊 ${t('stats_section')}`,

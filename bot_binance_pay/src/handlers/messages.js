@@ -1,6 +1,5 @@
 const BackendProduct = require('../services/backend-product');
 const Referral = require('../services/referral');
-const Events = require('../services/events');
 const BackendWallet = require('../services/backend-wallet');
 const {
   formatBinanceTopupMessage,
@@ -35,8 +34,6 @@ async function handleUserInput(ctx, state) {
       return handleCustomTopupBank(ctx, state);
     case 'enter_referral':
       return handleReferralCode(ctx, state);
-    case 'enter_promo':
-      return handlePromoCode(ctx, state);
     case 'enter_coupon':
       return handleEnterCoupon(ctx, state);
     default:
@@ -170,27 +167,6 @@ async function handleEnterCoupon(ctx, state) {
     await ctx.reply(message, {
       reply_markup: {
         inline_keyboard: [[{ text: t('cancel'), callback_data: `qty_${productId}_${variantId}_${quantity}` }]],
-      },
-    });
-  }
-}
-
-async function handlePromoCode(ctx) {
-  const userId = ctx.from.id;
-  const code = ctx.message.text.trim().toUpperCase();
-  userState.delete(userId);
-
-  const result = await Events.claimPromoCode(userId, code);
-  if (result.success) {
-    await ctx.reply(`✅ ${result.message}`, {
-      reply_markup: { inline_keyboard: [[{ text: '◀️ Back', callback_data: 'credits_menu' }]] },
-    });
-  } else {
-    await ctx.reply(`❌ ${result.message}`, {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: '🔄 Try again', callback_data: 'enter_promo' }, { text: '◀️ Back', callback_data: 'credits_menu' }],
-        ],
       },
     });
   }

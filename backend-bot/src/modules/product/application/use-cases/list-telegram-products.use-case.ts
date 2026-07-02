@@ -15,11 +15,13 @@ export class ListTelegramProductsUseCase {
   ) {}
 
   async execute(
+    shopId: string,
     categoryId: number | null,
     page: number,
     limit: number,
   ): Promise<{ data: TelegramProductListResponseDto; total: number }> {
     const { items, total } = await this.productRepository.listTelegramProducts(
+      shopId,
       categoryId,
       page,
       limit,

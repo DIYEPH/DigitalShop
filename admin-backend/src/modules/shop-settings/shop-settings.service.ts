@@ -18,6 +18,7 @@ import {
   ShopPaymentMethod,
   ShopPaymentProvider,
   UpdateTelegramBotDto,
+  UpdateTelegramBotStatusDto,
   UpsertPaymentCredentialDto,
 } from "./dto/shop-settings.dto";
 
@@ -89,6 +90,9 @@ export class ShopSettingsService {
     const encryptedToken = this.encryptJson({ bot_token: dto.bot_token });
     const botSecret = randomBytes(32).toString("base64url");
     const secretHash = this.sha256(botSecret);
+    // Encrypted copy of the same secret so the platform can launch the shop's
+    // bot runner without asking the seller for the secret again.
+    const secretEncrypted = this.encryptJson({ secret: botSecret });
     const botUsername = dto.bot_username?.replace(/^@/, "") || null;
     const status = dto.status ?? "ACTIVE";
 
@@ -103,29 +107,66 @@ export class ShopSettingsService {
            SET bot_username = $2,
                bot_token_encrypted = $3,
                secret_hash = $4,
-               status = $5::shop_status_enum,
+               secret_encrypted = $5,
+               status = $6::shop_status_enum,
                updated_at = NOW()
            WHERE id = $1
            RETURNING id, shop_id::text, bot_username, status::text AS status,
                      (bot_token_encrypted IS NOT NULL) AS has_token,
                      created_at, updated_at`,
-          [existing.rows[0].id, botUsername, encryptedToken, secretHash, status],
+          [
+            existing.rows[0].id,
+            botUsername,
+            encryptedToken,
+            secretHash,
+            secretEncrypted,
+            status,
+          ],
         )
       : await this.pool.query<BotRow>(
           `INSERT INTO telegram_bots (
-              shop_id, bot_username, bot_token_encrypted, secret_hash, status
+              shop_id, bot_username, bot_token_encrypted, secret_hash, secret_encrypted, status
            )
-           VALUES ($1::uuid, $2, $3, $4, $5::shop_status_enum)
+           VALUES ($1::uuid, $2, $3, $4, $5, $6::shop_status_enum)
            RETURNING id, shop_id::text, bot_username, status::text AS status,
                      (bot_token_encrypted IS NOT NULL) AS has_token,
                      created_at, updated_at`,
-          [shopId, botUsername, encryptedToken, secretHash, status],
+          [shopId, botUsername, encryptedToken, secretHash, secretEncrypted, status],
         );
 
     return {
       ...this.toBotResponse(result.rows[0]),
       internal_secret: botSecret,
     };
+  }
+
+  /** Toggle the bot on/off without regenerating the token or the internal secret. */
+  async setTelegramBotStatus(
+    currentShop: CurrentShop,
+    shopId: string,
+    dto: UpdateTelegramBotStatusDto,
+  ) {
+    this.assertCurrentShop(currentShop, shopId);
+    this.assertManager(currentShop);
+
+    const result = await this.pool.query<BotRow>(
+      `UPDATE telegram_bots
+       SET status = $2::shop_status_enum,
+           updated_at = NOW()
+       WHERE id = (
+         SELECT id FROM telegram_bots WHERE shop_id = $1::uuid ORDER BY id ASC LIMIT 1
+       )
+       RETURNING id, shop_id::text, bot_username, status::text AS status,
+                 (bot_token_encrypted IS NOT NULL) AS has_token,
+                 created_at, updated_at`,
+      [shopId, dto.status],
+    );
+
+    const row = result.rows[0];
+    if (!row) {
+      throw new NotFoundException("Telegram bot is not configured for this shop.");
+    }
+    return this.toBotResponse(row);
   }
 
   async listPaymentCredentials(currentShop: CurrentShop, shopId: string) {

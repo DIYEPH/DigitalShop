@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { BankIntegrationModule } from '../../integration/bank/bank.module';
+import { ShopPaymentModule } from '../../integration/shop-payment/shop-payment.module';
 import { BotSecretGuard } from '../auth/presentation/guards/bot-secret.guard';
 import { GetTelegramProductDetailUseCase } from './application/use-cases/get-telegram-product-detail.use-case';
 import { ListTelegramProductsUseCase } from './application/use-cases/list-telegram-products.use-case';
@@ -8,7 +8,7 @@ import { ProductTelegramController } from './presentation/controllers/product-te
 import { PRODUCT_REPOSITORY } from './product.tokens';
 
 @Module({
-  imports: [BankIntegrationModule],
+  imports: [ShopPaymentModule],
   controllers: [ProductTelegramController],
   providers: [
     ListTelegramProductsUseCase,

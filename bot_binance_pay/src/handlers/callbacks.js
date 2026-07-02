@@ -135,10 +135,6 @@ function register(bot) {
     if (data === 'my_referrals') return handleMyReferrals(ctx);
     if (data === 'enter_referral') return handleEnterReferral(ctx);
     if (data === 'copy_referral') return handleCopyReferral(ctx);
-    if (data === 'enter_promo') return handleEnterPromo(ctx);
-    if (data.startsWith('pay_') && !data.startsWith('pay_method_')) {
-      return ctx.answerCbQuery(i18n.getTranslator(ctx.from.id)('checkout_coming_soon'), { show_alert: true }).catch(() => {});
-    }
     if (data === 'lang_menu') return handleLanguageMenu(ctx);
     if (data.startsWith('lang_')) return handleLanguageSelect(ctx);
     ctx.answerCbQuery().catch(() => {});
@@ -179,6 +175,7 @@ async function handleProfile(ctx) {
     '',
     `💰 ${t('balance_section')}`,
     t('balance_label', { amount: formatPrice(profile.balanceUsdt, 'USDT') }),
+    t('balance_label', { amount: formatPrice(profile.balanceVnd, 'VNĐ') }),
     t('credits_label', { amount: formatPoint(profile.balancePoint) }),
     '',
     `📊 ${t('stats_section')}`,
@@ -1023,11 +1020,6 @@ async function handleDailyLoginClaim(ctx) {
     }
     ctx.answerCbQuery(resolveApiErrorMessage(t, apiError?.code), { show_alert: true }).catch(() => {});
   }
-}
-
-async function handleEnterPromo(ctx) {
-  const t = i18n.getTranslator(ctx.from.id);
-  await ctx.answerCbQuery(t('checkout_coming_soon'), { show_alert: true }).catch(() => {});
 }
 
 async function handleCopyReferral(ctx) {

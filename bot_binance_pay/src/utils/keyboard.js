@@ -2,7 +2,7 @@
 const { formatPrice, formatCategoryPrice, formatVariantPrice, buildVariantLabel, wideInlineLabel } = require('./helpers');
 
 
-function buildShopKeyboard(products, t = null, adminUsername = null, langCode = 'en') {
+function buildShopKeyboard(products, t = null, supportUrl = null, langCode = 'en') {
   const keyboard = products.map(p => {
     const name = langCode === 'vi' ? (p.name_vi || p.name_en) : (p.name_en || p.name_vi);
     const priceText = formatCategoryPrice(
@@ -30,8 +30,8 @@ function buildShopKeyboard(products, t = null, adminUsername = null, langCode = 
     keyboard.push([{ text: t('language_btn'), callback_data: 'lang_menu' }]);
   }
 
-  if (adminUsername && t) {
-    keyboard.push([{ text: t('contact_admin'), url: `https://t.me/${adminUsername}` }]);
+  if (supportUrl && t) {
+    keyboard.push([{ text: t('contact_admin'), url: supportUrl }]);
   }
 
   return keyboard;
@@ -99,40 +99,6 @@ function buildPaymentMethodKeyboard(productId, variantId, qty, paymentMethods, t
   return keyboard;
 }
 
-function buildProductKeyboard(product, t = null, backCallback = 'back_main') {
-  const stock = product.stock_count;
-  const presets = [1, 2, 3, 5, 10];
-  const qtyButtons = [];
-
-  presets.forEach(n => {
-    if (n <= stock) {
-      qtyButtons.push({ text: `『${n}』`, callback_data: `qty_${product.id}_${n}` });
-    }
-  });
-
-  if (stock > 10) {
-    qtyButtons.push({ text: `『MAX:${stock}』`, callback_data: `qty_${product.id}_${stock}` });
-  }
-
-  const keyboard = [];
-  if (qtyButtons.length <= 3) {
-    keyboard.push(qtyButtons);
-  } else {
-    keyboard.push(qtyButtons.slice(0, 3));
-    keyboard.push(qtyButtons.slice(3));
-  }
-
-  if (stock > 5 && t) {
-    keyboard.push([{ text: t('enter_quantity'), callback_data: `customqty_${product.id}` }]);
-  }
-
-  if (t) {
-    keyboard.push([{ text: t('back'), callback_data: backCallback }]);
-  }
-
-  return keyboard;
-}
-
 function buildDepositKeyboard(t = null, langCode = 'en') {
   const config = require('../config');
   const keyboard = [
@@ -173,13 +139,11 @@ function buildDepositAmountKeyboard(method, t = null) {
 }
 
 module.exports = {
-  VND_BOT_METHODS,
   buildShopKeyboard,
   buildVariantKeyboard,
   buildQtyKeyboard,
   filterBotPaymentMethods,
   buildPaymentMethodKeyboard,
-  buildProductKeyboard,
   buildDepositKeyboard,
   buildDepositAmountKeyboard,
 };

@@ -1,8 +1,7 @@
 import { Module } from '@nestjs/common';
 import { BotSecretGuard } from '../auth/presentation/guards/bot-secret.guard';
 import { CouponModule } from '../coupon/coupon.module';
-import { BankIntegrationModule } from '../../integration/bank/bank.module';
-import { BinanceIntegrationModule } from '../../integration/binance/binance.module';
+import { ShopPaymentModule } from '../../integration/shop-payment/shop-payment.module';
 import { CancelTelegramOrderUseCase } from './application/use-cases/cancel-telegram-order.use-case';
 import { CheckTelegramOrderPaymentUseCase } from './application/use-cases/check-telegram-order-payment.use-case';
 import { CreateTelegramOrderUseCase } from './application/use-cases/create-telegram-order.use-case';
@@ -19,7 +18,7 @@ import { ORDER_REPOSITORY } from './order.tokens';
 import { OrderTelegramController } from './presentation/controllers/order-telegram.controller';
 
 @Module({
-  imports: [CouponModule, BankIntegrationModule, BinanceIntegrationModule],
+  imports: [CouponModule, ShopPaymentModule],
   controllers: [OrderTelegramController],
   providers: [
     QuoteTelegramOrderUseCase,

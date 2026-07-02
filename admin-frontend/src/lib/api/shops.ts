@@ -104,6 +104,20 @@ export async function updateTelegramBotSettings(
   });
 }
 
+export async function updateTelegramBotStatus(
+  token: string,
+  shopId: string,
+  status: "ACTIVE" | "SUSPENDED",
+) {
+  return apiFetch<TelegramBotSettings>(`/api/admin/v1/shops/${shopId}/bot/status`, {
+    method: "PUT",
+    token,
+    shopId,
+    body: { status },
+    cache: "no-store",
+  });
+}
+
 export async function listPaymentCredentials(token: string, shopId: string) {
   return apiFetch<{ credentials: PaymentCredential[] }>(
     `/api/admin/v1/shops/${shopId}/payment-credentials`,

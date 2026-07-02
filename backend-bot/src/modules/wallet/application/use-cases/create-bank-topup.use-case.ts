@@ -1,8 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { assertBankCheckoutConfigured } from '../../../../integration/bank/bank-checkout';
-import { SepayGateway } from '../../../../integration/bank/sepay.gateway';
 import { ApiException } from '../../../../shared/errors/api.exception';
-import { SEPAY_GATEWAY } from '../../../../integration/bank/bank.tokens';
+import { ShopPaymentGatewaysService } from '../../../../integration/shop-payment/shop-payment-gateways.service';
 import { TOPUP_REPOSITORY } from '../../wallet.tokens';
 import { TopupRepository } from '../../domain/repositories/topup.repository';
 import {
@@ -20,12 +19,15 @@ export class CreateBankTelegramTopupUseCase {
   constructor(
     @Inject(TOPUP_REPOSITORY)
     private readonly topupRepository: TopupRepository,
-    @Inject(SEPAY_GATEWAY)
-    private readonly sepayGateway: SepayGateway,
+    private readonly shopGateways: ShopPaymentGatewaysService,
   ) {}
 
-  async execute(input: TelegramTopupBankCreateDto): Promise<TelegramTopupResponseDto> {
-    assertBankCheckoutConfigured(this.sepayGateway);
+  async execute(
+    shopId: string,
+    input: TelegramTopupBankCreateDto,
+  ): Promise<TelegramTopupResponseDto> {
+    const sepayGateway = await this.shopGateways.getSepay(shopId);
+    assertBankCheckoutConfigured(sepayGateway);
 
     const amount = Math.round(Number(input.amount));
     if (!Number.isInteger(amount) || amount < MIN_BANK_TOPUP_VND) {
@@ -41,25 +43,26 @@ export class CreateBankTelegramTopupUseCase {
       throw new ApiException('user_not_found', 'Telegram user is not linked yet.', 404);
     }
 
-    const existing = await this.topupRepository.findActivePendingTopup(userId);
+    const existing = await this.topupRepository.findActivePendingTopup(shopId, userId);
     if (existing) {
       throw new ApiException(
         'pending_topup_exists',
         'You already have a pending topup. Complete or cancel it first.',
         409,
         {
-          topup: mapTopupCreateResponse(existing, { sepayGateway: this.sepayGateway }),
+          topup: mapTopupCreateResponse(existing, { sepayGateway }),
         },
       );
     }
 
     const topup = await this.topupRepository.createBankTopup({
+      shopId,
       userId,
       amount,
       paymentCode: generateTopupPaymentCode(),
       expiresAt: new Date(Date.now() + TOPUP_TIMEOUT_MS),
     });
 
-    return mapTopupCreateResponse(topup, { sepayGateway: this.sepayGateway });
+    return mapTopupCreateResponse(topup, { sepayGateway });
   }
 }

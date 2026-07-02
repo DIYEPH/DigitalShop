@@ -7,6 +7,7 @@ import { WalletModule } from './modules/wallet/wallet.module';
 import { PointModule } from './modules/point/point.module';
 import { ReferralModule } from './modules/referral/referral.module';
 import { CouponModule } from './modules/coupon/coupon.module';
+import { BotRunnerModule } from './modules/bot-runner/bot-runner.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { CouponModule } from './modules/coupon/coupon.module';
     PointModule,
     ReferralModule,
     CouponModule,
+    BotRunnerModule,
   ],
 })
 export class AppModule {}
